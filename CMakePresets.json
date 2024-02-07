@@ -1,0 +1,30 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "debug-x64",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/debug",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release-x64",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        }
+    ]
+}
