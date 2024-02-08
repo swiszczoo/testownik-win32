@@ -92,9 +92,9 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
         CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE,
-        L"Segoe UI"
+        L"Segoe UI Light"
     );
-    instance->header_fnt = create_font(L"Segoe UI", 30, false, false);
+    instance->header_fnt = create_font(L"Segoe UI", 28, false, false);
     instance->body_fnt = create_font(L"Segoe UI", 20, false, false);
 }
 
