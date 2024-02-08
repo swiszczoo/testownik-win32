@@ -15,10 +15,15 @@ void vec_init(vec* instance, size_t element_size)
 void vec_destroy(vec* instance)
 {
     free(instance->data);
+    instance->data = NULL;
 }
 
 void vec_clear(vec* instance)
 {
+    if (instance->length == 0) {
+        return;
+    }
+
     vec_destroy(instance);
     vec_init(instance, instance->element_size);
 }

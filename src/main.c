@@ -5,6 +5,9 @@
 #include <memory.h>
 #include <string.h>
 
+#include <messages.h>
+#include <random.h>
+#include <resource.h>
 #include <screen_welcome.h>
 #include <testownik.h>
 
@@ -30,7 +33,12 @@ void register_screens(void)
 
 void create_screens(HWND parent)
 {
-    screen_welcome_create(parent, &welcome_screen);
+    screen_welcome_create(parent, &welcome_screen, status_bar);
+}
+
+void destroy_screens(void)
+{
+    screen_welcome_destroy(&welcome_screen);
 }
 
 void resize_all_screens(int new_width, int new_height)
@@ -49,7 +57,9 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 #endif
 
     init_comm_ctrl();
+    random_init();
     testownik_init();
+    CoInitialize(NULL);
 
     HWND hwnd;
     MSG msg;
@@ -61,22 +71,22 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = hInstance;
-    wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wcex.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_TESTOWNIK));
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = L"TestownikWndClass";
-    wcex.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    wcex.hIconSm = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_TESTOWNIK_SM));
 
     RegisterClassEx(&wcex);
 
     hwnd = CreateWindow(wcex.lpszClassName,     // window class name
         L"Testownik",                           // window caption
         WS_OVERLAPPEDWINDOW,                    // window style
-        CW_USEDEFAULT,                          // initial x position
-        CW_USEDEFAULT,                          // initial y position
+        300,                                    // initial x position
+        200,                                    // initial y position
         1000,                                   // initial x size
-        600,                                    // initial y size
+        800,                                    // initial y size
         NULL,                                   // parent window handle
         NULL,                                   // window menu handle
         hInstance,                              // program instance handle
@@ -88,12 +98,12 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     register_screens();
     create_screens(hwnd);
 
-    testownik_try_load_database();
-
     if (hwnd)
     {
         ShowWindow(hwnd, SW_SHOW);
         UpdateWindow(hwnd);
+
+        screen_welcome_run(&welcome_screen);
 
         while (GetMessage(&msg, NULL, 0, 0))
         {
@@ -102,23 +112,29 @@ int WINAPI wWinMain(HINSTANCE hInstance,
         }
     }
 
+    destroy_screens();
+
     ExitProcess(0);
     return 0;
 }
 
+static void event_game_start(void)
+{
+    Beep(1000, 100);
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 {
-
     switch (iMsg)
     {
     case WM_CREATE:
-        return 0; // return -1 to cancel the creation of the window
+        return 0;
 
     case WM_GETMINMAXINFO:
     {
         LPMINMAXINFO minMax = (LPMINMAXINFO)lParam;
         minMax->ptMinTrackSize.x = 750;
-        minMax->ptMinTrackSize.y = 500;
+        minMax->ptMinTrackSize.y = 650;
         return 0;
     }
 
@@ -131,9 +147,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
 
-        int statusBarParts[] = {width - 400, width - 200, -1 };
-        SendMessage(status_bar, SB_SETPARTS, 3, (LPARAM)statusBarParts);
-
+        int statusBarParts[] = {width - 550, width - 400, width - 250, -1 };
+        SendMessage(status_bar, SB_SETPARTS, 4, (LPARAM)statusBarParts);
         SendMessage(status_bar, WM_SIZE, 0, 0);
 
         RECT status_rect;
@@ -144,6 +159,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_DESTROY:
         PostQuitMessage(0);
+        return 0;
+
+    case TM_START_GAME:
+        event_game_start();
         return 0;
     }
 

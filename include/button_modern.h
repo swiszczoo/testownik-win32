@@ -17,7 +17,7 @@ typedef struct {
 } button_modern;
 
 HWND button_modern_hwnd(button_modern* instance);
-void button_modern_create(HWND parent, button_modern* instance, int x, int y, int width, int height);
+void button_modern_create(HWND parent, button_modern* instance, LPCWSTR text, int x, int y, int width, int height);
 void button_modern_destroy(button_modern* instance);
 void button_modern_set_color(button_modern* instance, COLORREF background);
 

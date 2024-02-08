@@ -1,4 +1,5 @@
 #include <button_modern.h>
+#include <utils.h>
 
 #include <CommCtrl.h>
 
@@ -11,34 +12,24 @@ HWND button_modern_hwnd(button_modern* instance)
     return instance->hwnd;
 }
 
-void button_modern_create(HWND parent, button_modern* instance, int x, int y, int width, int height)
+void button_modern_create(HWND parent, button_modern* instance, LPCWSTR text,
+    int x, int y, int width, int height)
 {
-    instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, L"BUTTON", L"Start",
+    instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, L"BUTTON", text,
         BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE, x, y, width, height, parent,
         NULL, GetModuleHandle(NULL), NULL);
     instance->org_proc = (WNDPROC)SetWindowLongPtr(
         instance->hwnd, GWLP_WNDPROC, (LONG_PTR)button_modern_wndproc);
     instance->bg_brush = NULL;
-    instance->fg_font = CreateFontA(
-        36,
-        0,
-        0,
-        0,
-        FW_BOLD,
-        FALSE,
-        FALSE,
-        FALSE,
-        ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS,
-        CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY,
-        DEFAULT_PITCH | FF_DONTCARE,
-        "Segoe UI"
-    );
+    instance->fg_font = create_font(L"Segoe UI", 36, true, false);
     instance->hovered = false;
     instance->clicked = false;
 
     SetWindowLongPtr(instance->hwnd, GWLP_USERDATA, (LONG_PTR)instance);
+
+    WORD class_style = GetClassLongPtr(instance->hwnd, GCL_STYLE);
+    class_style &= ~CS_DBLCLKS;
+    SetClassLongPtr(instance->hwnd, GCL_STYLE, class_style);
 
     button_modern_set_color(instance, RGB(32, 32, 32));
 }
@@ -91,6 +82,9 @@ LRESULT CALLBACK button_modern_wndproc(
     switch (msg) {
     case WM_PAINT:
     {
+        RECT clientRect;
+        GetClientRect(hwnd, &clientRect);
+
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         HGDIOBJ prevBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
@@ -100,18 +94,19 @@ LRESULT CALLBACK button_modern_wndproc(
         SetTextColor(hdc, RGB(255, 255, 255));
 
         if (instance->hovered) {
-            Rectangle(hdc, ps.rcPaint.left + BORDER_SIZE / 2, ps.rcPaint.top + BORDER_SIZE / 2,
-                ps.rcPaint.right - BORDER_SIZE / 2, ps.rcPaint.bottom - BORDER_SIZE / 2);
+            Rectangle(hdc, clientRect.left + BORDER_SIZE / 2, clientRect.top + BORDER_SIZE / 2,
+                clientRect.right - BORDER_SIZE / 2, clientRect.bottom - BORDER_SIZE / 2);
         }
 
         SelectObject(hdc, instance->clicked ? instance->bg_brush_pressed : instance->bg_brush);
         SelectObject(hdc, GetStockObject(NULL_PEN));
-        Rectangle(hdc, ps.rcPaint.left + BORDER_SIZE, ps.rcPaint.top + BORDER_SIZE,
-            ps.rcPaint.right - BORDER_SIZE, ps.rcPaint.bottom - BORDER_SIZE);
+        Rectangle(hdc, clientRect.left + BORDER_SIZE, clientRect.top + BORDER_SIZE,
+            clientRect.right - BORDER_SIZE, clientRect.bottom - BORDER_SIZE);
 
         WCHAR windowText[256];
         GetWindowText(hwnd, windowText, 256);
-        DrawText(hdc, windowText, -1, &ps.rcPaint, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+        DrawText(hdc, windowText, -1, &clientRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         
         SelectObject(hdc, prevBrush);
         SelectObject(hdc, prevPen);

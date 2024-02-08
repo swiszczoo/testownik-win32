@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(testownik_win32 VERSION 1.0.0)
 
+set(CMAKE_C_STANDARD 17)
+
 file(GLOB_RECURSE SOURCES "src/*.*")
 
 add_executable(${PROJECT_NAME} WIN32
@@ -19,7 +21,7 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_link_libraries(${PROJECT_NAME} PRIVATE msvcrt-light-x64)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE comctl32 pathcch shlwapi)
-target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_link_libraries(${PROJECT_NAME} PRIVATE comctl32 pathcch shlwapi ole32 shell32)
+target_include_directories(${PROJECT_NAME} PRIVATE include win32)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Testownik")
