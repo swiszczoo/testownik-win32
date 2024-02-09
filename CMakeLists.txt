@@ -15,7 +15,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE -DUNICODE -D_UNICODE)
 # Disable CRT to decrease executable size
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${PROJECT_NAME} PRIVATE /GS- /Os)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE -DNOCRT)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DNOCRT -DUSE_MSVCRT)
     target_link_options(${PROJECT_NAME} PRIVATE /NODEFAULTLIB /ENTRY:wWinMain)
     target_link_directories(${PROJECT_NAME} PRIVATE crt)
     target_link_libraries(${PROJECT_NAME} PRIVATE msvcrt-light-x64)

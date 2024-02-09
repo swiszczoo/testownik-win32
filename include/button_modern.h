@@ -8,7 +8,9 @@ typedef struct {
     COLORREF bg_color;
     HBRUSH bg_brush;
     HBRUSH bg_brush_pressed;
+    HBRUSH bg_brush_disabled;
     HPEN bg_pen;
+    HPEN bg_nopen;
     HFONT fg_font;
     WNDPROC org_proc;
 

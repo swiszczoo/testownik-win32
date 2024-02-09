@@ -48,7 +48,8 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
 {
     instance->status_bar = status_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
-        WS_CHILD | WS_VISIBLE, 0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
+        WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE,
+        0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
     SetWindowLongPtr(instance->hwnd, GWLP_USERDATA, (LONG_PTR)instance);
 
     button_modern_create(instance->hwnd, &instance->library_btn, L"Wyb\u00f3r bazy...", 0, 0, 250, 80);
@@ -57,18 +58,20 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
     button_modern_create(instance->hwnd, &instance->start_btn, L"Rozpocznij", 0, 0, 250, 80);
     button_modern_set_color(&instance->start_btn, RGB(33, 120, 60));
 
+    EnableWindow(button_modern_hwnd(&instance->start_btn), FALSE);
+
     instance->check_rnd_questions = CreateWindow(L"BUTTON",
-        L"Losowa kolejno\u015b\u0107 pyta\u0144", BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE,
+        L"Losowa kolejno\u015b\u0107 pyta\u0144", BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
         0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     instance->check_rnd_answers = CreateWindow(L"BUTTON",
-        L"Losowa kolejno\u015b\u0107 odpowiedzi", BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE,
+        L"Losowa kolejno\u015b\u0107 odpowiedzi", BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
         0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     instance->check_always_multi = CreateWindow(L"BUTTON",
-        L"Zawsze pokazuj pytania wielokrotnego wyboru", BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE,
+        L"Zawsze pokazuj pytania wielokrotnego wyboru", BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
         0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     instance->check_autoselect = CreateWindow(L"BUTTON",
         L"Automatycznie zatwierdzaj odpowied\u017a przy pytaniach jednokrotnego wyboru",
-        BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE,
+        BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
         0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(instance->check_rnd_questions, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
     SendMessage(instance->check_rnd_answers, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
@@ -186,7 +189,7 @@ static void screen_welcome_start_game(screen_welcome* instance)
     game_config.auto_accept = Button_GetCheck(instance->check_autoselect) == BST_CHECKED;
 
     testownik_start_game(&game_config);
-    PostMessage(GetParent(instance->hwnd), TM_START_GAME, NULL, NULL);
+    PostMessage(GetParent(instance->hwnd), TM_START_GAME, 0, 0);
 }
 
 static void screen_welcome_command(screen_welcome* instance, HWND sender)
@@ -273,7 +276,16 @@ void screen_welcome_run(screen_welcome* instance)
         }
     }
 
+    EnableWindow(button_modern_hwnd(&instance->start_btn), TRUE);
     InvalidateRect(instance->hwnd, NULL, TRUE);
+
+    // TODO: remove this, for tests:
+    testownik_config conf = {0};
+    conf.shuffle_answers = true;
+    conf.shuffle_questions = true;
+    testownik_start_game(&conf);
+
+    PostMessage(GetParent(instance->hwnd), TM_START_GAME, 0, 0);
 }
 
 LRESULT CALLBACK screen_welcome_wndproc(

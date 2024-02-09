@@ -12,7 +12,7 @@
 #include <wchar.h>
 
 #define MAX_QUESTION_SIZE               (1 << 20)
-#define MAX_ANSWERS_PER_QUESTION        32
+#define MAX_ANSWERS_PER_QUESTION        TESTOWNIK_MAX_ANSWERS_PER_QUESTION
 
 typedef struct {
     testownik_config config;
@@ -23,7 +23,9 @@ typedef struct {
     bool* questions_correct;
     bool* questions_active;
 
+    bool is_game_in_progress;
     testownik_game_state game;
+    testownik_question_info current_question;
 } testownik;
 
 typedef struct {
@@ -42,9 +44,9 @@ typedef struct {
     testownik_answer answers[MAX_ANSWERS_PER_QUESTION];
 } testownik_question;
 
-static testownik APP;
+static testownik APP = { 0 };
 
-void testownik_init()
+void testownik_init(void)
 {
     ZeroMemory(&APP, sizeof(APP));
 
@@ -101,8 +103,19 @@ static int testownik_next_line(LPCWSTR input)
     return offset;
 }
 
+static int testownik_strip_whitespace_end(LPCWSTR text, int count)
+{
+    while (iswspace(text[count - 1]) && count > 0) {
+        --count;
+    }
+
+    return count;
+}
+
 static void testownik_load_question_text(LPCWSTR text, int count, testownik_question* out)
 {
+    count = testownik_strip_whitespace_end(text, count);
+
     out->question_number = wcstol(text, NULL, 10);
     out->question_text = malloc(sizeof(WCHAR) * (count + 1));
     *out->question_text = L'\0';
@@ -110,7 +123,7 @@ static void testownik_load_question_text(LPCWSTR text, int count, testownik_ques
     if (out->question_text) {
         for (int i = 0; text[i] && text[i + 1]; ++i) {
             if (text[i] == L'.' && text[i + 1] == L'\t') {
-                wcsncat(out->question_text, text + i + 2, count - i - 3);
+                wcsncat(out->question_text, text + i + 2, count - i - 2);
             }
         }
     }
@@ -124,9 +137,11 @@ static void testownik_load_answer(LPCWSTR text, int count, int answer_id, testow
         --count;
     }
 
+    count = testownik_strip_whitespace_end(text, count);
+
     out->answers[answer_id].text = malloc(sizeof(WCHAR) * (count + 1));
     *out->answers[answer_id].text = L'\0';
-    wcsncat(out->answers[answer_id].text, text, count - 1);
+    wcsncat(out->answers[answer_id].text, text, count);
 
     if (count > 1) {
         out->answers[answer_id].symbol = text[1];
@@ -322,7 +337,7 @@ error:
     return false;
 }
 
-static void testownik_clear_database()
+static void testownik_clear_database(void)
 {
     size_t count = vec_get_size(&APP.questions);
     while (count--) {
@@ -355,7 +370,7 @@ static int testownik_sort_questions_comparator(const void* elem1, const void* el
     return left->question_number - right->question_number;
 }
 
-static void testownik_sort_questions()
+static void testownik_sort_questions(void)
 {
     if (vec_get_size(&APP.questions) == 0) {
         return;
@@ -365,7 +380,7 @@ static void testownik_sort_questions()
         sizeof(testownik_question), testownik_sort_questions_comparator);
 }
 
-static void testownik_prepare_initial_state()
+static void testownik_prepare_initial_state(void)
 {
     int total_question_count = vec_get_size(&APP.questions);
 
@@ -376,7 +391,7 @@ static void testownik_prepare_initial_state()
     for (int i = 0; i < total_question_count; ++i) {
         APP.question_order[i] = i;
         APP.questions_correct[i] = false;
-        APP.questions_active[i] = false;
+        APP.questions_active[i] = true;
     }
 
     APP.game.current_question = 0;
@@ -386,7 +401,7 @@ static void testownik_prepare_initial_state()
     APP.game.wrong_count = 0;
 }
 
-bool testownik_try_load_database()
+bool testownik_try_load_database(void)
 {
     if (!PathIsDirectory(APP.db_path)) {
         return false;
@@ -448,18 +463,22 @@ void testownik_set_db_path(LPCTSTR new_db_path)
     wcscpy(APP.db_path, new_db_path);
 }
 
-size_t testownik_get_question_count()
+size_t testownik_get_question_count(void)
 {
     return vec_get_size(&APP.questions);
 }
 
-const testownik_config* testownik_get_configuration()
+const testownik_config* testownik_get_configuration(void)
 {
     return &APP.config;
 }
 
 void testownik_start_game(testownik_config* game_config)
 {
+    if (APP.is_game_in_progress) {
+        return;
+    }
+
     memcpy(&APP.config, game_config, sizeof(testownik_config));
 
     int total_questions_count = vec_get_size(&APP.questions);
@@ -472,7 +491,7 @@ void testownik_start_game(testownik_config* game_config)
     }
 
     APP.game.current_question = 0;
-    APP.game.current_question_real_idx = 0;
+    APP.game.current_question_real_idx = -1;
     APP.game.questions_active_count = active_questions;
     APP.game.correct_count = 0;
     APP.game.wrong_count = 0;
@@ -480,5 +499,78 @@ void testownik_start_game(testownik_config* game_config)
     if (game_config->shuffle_questions) {
         random_shuffle_int_array(APP.question_order, total_questions_count);
     }
+
+    APP.is_game_in_progress = true;
+}
+
+void testownik_get_game_state(testownik_game_state* out)
+{
+    memcpy(out, &APP.game, sizeof(testownik_game_state));
+}
+
+static void testownik_update_current_question_state()
+{
+    int question_id = APP.question_order[APP.game.current_question_real_idx];
+    testownik_question* question = (testownik_question*)vec_get(&APP.questions, question_id);
+
+    memset(&APP.current_question, 0, sizeof(testownik_question_info));
+
+    APP.current_question.question_number = question->question_number;
+    APP.current_question.question_text = question->question_text;
+    APP.current_question.question_type = MULTI_CHOICE;
+
+    if (question->correct_answer_count == 1 && !APP.config.always_multiselect) {
+        APP.current_question.question_type = SINGLE_CHOICE;
+    }
+
+    APP.current_question.answer_count = question->total_answer_count;
+    for (int i = 0; i < question->total_answer_count; ++i) {
+        APP.current_question.answer_id[i] = i;
+    }
+
+    if (APP.config.shuffle_answers) {
+        random_shuffle_int_array(
+            APP.current_question.answer_id, question->total_answer_count);
+    }
+
+    for (int i = 0; i < question->total_answer_count; ++i) {
+        int answer_id = APP.current_question.answer_id[i];
+        APP.current_question.answer_symbol[i] = question->answers[answer_id].symbol;
+        APP.current_question.answer_text[i] = question->answers[answer_id].text;
+    }
+}
+
+bool testownik_move_to_next_question(void)
+{
+    if (!APP.is_game_in_progress) {
+        return false;
+    }
+
+    ++APP.game.current_question_real_idx;
+    ++APP.game.current_question;
+
+    int total_questions = vec_get_size(&APP.questions);
+
+    while (APP.game.current_question_real_idx < total_questions) {
+        int question_id = APP.question_order[APP.game.current_question_real_idx];
+        if (APP.questions_active[question_id]) {
+            testownik_update_current_question_state();
+            return true;
+        }
+    }
+
+    // There are no more questions
+    APP.is_game_in_progress = false;
+    return false;
+}
+
+bool testownik_get_question_info(testownik_question_info* info)
+{
+    if (APP.is_game_in_progress) {
+        memcpy(info, &APP.current_question, sizeof(testownik_question_info));
+        return true;
+    }
+
+    return false;
 }
 

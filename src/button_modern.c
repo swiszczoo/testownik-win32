@@ -16,11 +16,14 @@ void button_modern_create(HWND parent, button_modern* instance, LPCWSTR text,
     int x, int y, int width, int height)
 {
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, L"BUTTON", text,
-        BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE, x, y, width, height, parent,
+        BS_PUSHBUTTON | WS_TABSTOP | WS_CHILD | WS_VISIBLE, x, y, width, height, parent,
         NULL, GetModuleHandle(NULL), NULL);
     instance->org_proc = (WNDPROC)SetWindowLongPtr(
         instance->hwnd, GWLP_WNDPROC, (LONG_PTR)button_modern_wndproc);
     instance->bg_brush = NULL;
+    instance->bg_brush_pressed = NULL;
+    instance->bg_brush_disabled = CreateSolidBrush(RGB(196, 196, 196));
+    instance->bg_nopen = CreatePen(PS_SOLID, BORDER_SIZE, RGB(255, 255, 255));
     instance->fg_font = create_font(L"Segoe UI", 36, true, false);
     instance->hovered = false;
     instance->clicked = false;
@@ -37,10 +40,25 @@ void button_modern_create(HWND parent, button_modern* instance, LPCWSTR text,
 void button_modern_destroy(button_modern* instance)
 {
     DestroyWindow(instance->hwnd);
-    DeleteObject(instance->bg_brush);
-    DeleteObject(instance->bg_brush_pressed);
-    DeleteObject(instance->bg_pen);
-    DeleteObject(instance->fg_font);
+
+    if (instance->bg_brush) {
+        DeleteObject(instance->bg_brush);
+    }
+    if (instance->bg_brush_pressed) {
+        DeleteObject(instance->bg_brush_pressed);
+    }
+    if (instance->bg_brush_disabled) {
+        DeleteObject(instance->bg_brush_disabled);
+    }
+    if (instance->bg_pen) {
+        DeleteObject(instance->bg_pen);
+    }
+    if (instance->bg_nopen) {
+        DeleteObject(instance->bg_nopen);
+    }
+    if (instance->fg_font) {
+        DeleteObject(instance->fg_font);
+    }
 }
 
 void button_modern_set_color(button_modern* instance, COLORREF background)
@@ -82,26 +100,35 @@ LRESULT CALLBACK button_modern_wndproc(
     switch (msg) {
     case WM_PAINT:
     {
+        BOOL enabled = IsWindowEnabled(hwnd);
+        if (!enabled) {
+            instance->hovered = instance->clicked = false;
+        }
+
         RECT clientRect;
         GetClientRect(hwnd, &clientRect);
 
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
         HGDIOBJ prevBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
-        HGDIOBJ prevPen = SelectObject(hdc, instance->hovered ? instance->bg_pen : GetStockObject(NULL_PEN));
+        HGDIOBJ prevPen = SelectObject(hdc, instance->hovered ? instance->bg_pen : instance->bg_nopen);
         HGDIOBJ prevFont = SelectObject(hdc, instance->fg_font);
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, RGB(255, 255, 255));
 
-        if (instance->hovered) {
-            Rectangle(hdc, clientRect.left + BORDER_SIZE / 2, clientRect.top + BORDER_SIZE / 2,
-                clientRect.right - BORDER_SIZE / 2, clientRect.bottom - BORDER_SIZE / 2);
+        Rectangle(hdc, clientRect.left + BORDER_SIZE / 2, clientRect.top + BORDER_SIZE / 2,
+            clientRect.right - BORDER_SIZE / 2 + 1, clientRect.bottom - BORDER_SIZE / 2 + 1);
+
+        if (enabled) {
+            SelectObject(hdc, instance->clicked ? instance->bg_brush_pressed : instance->bg_brush);
+        }
+        else {
+            SelectObject(hdc, instance->bg_brush_disabled);
         }
 
-        SelectObject(hdc, instance->clicked ? instance->bg_brush_pressed : instance->bg_brush);
         SelectObject(hdc, GetStockObject(NULL_PEN));
         Rectangle(hdc, clientRect.left + BORDER_SIZE, clientRect.top + BORDER_SIZE,
-            clientRect.right - BORDER_SIZE, clientRect.bottom - BORDER_SIZE);
+            clientRect.right - BORDER_SIZE + 1, clientRect.bottom - BORDER_SIZE + 1);
 
         WCHAR windowText[256];
         GetWindowText(hwnd, windowText, 256);
@@ -154,6 +181,7 @@ LRESULT CALLBACK button_modern_wndproc(
         instance->hovered = false;
         instance->clicked = false;
         InvalidateRect(hwnd, NULL, TRUE);
+        break;
     }
 
     }

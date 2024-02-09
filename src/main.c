@@ -8,16 +8,25 @@
 #include <messages.h>
 #include <random.h>
 #include <resource.h>
-#include <screen_welcome.h>
 #include <testownik.h>
+
+#include <screen_question.h>
+#include <screen_welcome.h>
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
+typedef enum {
+    SCREEN_WELCOME,
+    SCREEN_QUESTION,
+} screen;
+
+static screen current_screen = -1;
 static screen_welcome welcome_screen;
+static screen_question question_screen;
 
 static HWND status_bar;
 
-void init_comm_ctrl(void)
+static void init_comm_ctrl(void)
 {
     INITCOMMONCONTROLSEX cctrl;
     cctrl.dwSize = sizeof(cctrl);
@@ -26,24 +35,38 @@ void init_comm_ctrl(void)
     InitCommonControlsEx(&cctrl);
 }
 
-void register_screens(void)
+static void register_screens(void)
 {
     screen_welcome_register();
+    screen_question_register();
 }
 
-void create_screens(HWND parent)
+static void create_screens(HWND parent)
 {
     screen_welcome_create(parent, &welcome_screen, status_bar);
+    screen_question_create(parent, &question_screen, status_bar);
 }
 
-void destroy_screens(void)
+static void set_current_screen(screen new_screen)
+{
+    current_screen = new_screen;
+
+    ShowWindow(screen_welcome_hwnd(&welcome_screen),
+        new_screen == SCREEN_WELCOME ? SW_SHOW : SW_HIDE);
+    ShowWindow(screen_question_hwnd(&question_screen),
+        new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
+}
+
+static void destroy_screens(void)
 {
     screen_welcome_destroy(&welcome_screen);
+    screen_question_destroy(&question_screen);
 }
 
-void resize_all_screens(int new_width, int new_height)
+static void resize_all_screens(int new_width, int new_height)
 {
     SetWindowPos(screen_welcome_hwnd(&welcome_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
+    SetWindowPos(screen_question_hwnd(&question_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance,
@@ -59,7 +82,11 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     init_comm_ctrl();
     random_init();
     testownik_init();
-    CoInitialize(NULL);
+    if (CoInitialize(NULL) != S_OK) {
+        MessageBox(NULL, L"Can't initialize COM library. Exiting.", NULL, MB_ICONERROR);
+        ExitProcess(1);
+        return 1;
+    }
 
     HWND hwnd;
     MSG msg;
@@ -92,11 +119,12 @@ int WINAPI wWinMain(HINSTANCE hInstance,
         hInstance,                              // program instance handle
         NULL);                                  // creation parameters
 
-    status_bar = CreateWindowEx(NULL, STATUSCLASSNAME, NULL,
+    status_bar = CreateWindow(STATUSCLASSNAME, NULL,
         SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, hInstance, NULL);
 
     register_screens();
     create_screens(hwnd);
+    set_current_screen(SCREEN_WELCOME);
 
     if (hwnd)
     {
@@ -107,8 +135,10 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
         while (GetMessage(&msg, NULL, 0, 0))
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            if (!IsDialogMessage(hwnd, &msg)) {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
     }
 
@@ -120,7 +150,8 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
 static void event_game_start(void)
 {
-    Beep(1000, 100);
+    set_current_screen(SCREEN_QUESTION);
+    screen_question_run(&question_screen);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
@@ -133,8 +164,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     case WM_GETMINMAXINFO:
     {
         LPMINMAXINFO minMax = (LPMINMAXINFO)lParam;
-        minMax->ptMinTrackSize.x = 750;
-        minMax->ptMinTrackSize.y = 650;
+        minMax->ptMinTrackSize.x = 800;
+        minMax->ptMinTrackSize.y = 700;
         return 0;
     }
 
@@ -147,7 +178,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
 
-        int statusBarParts[] = {width - 550, width - 400, width - 250, -1 };
+        int statusBarParts[] = {width - 700, width - 500, width - 300, -1 };
         SendMessage(status_bar, SB_SETPARTS, 4, (LPARAM)statusBarParts);
         SendMessage(status_bar, WM_SIZE, 0, 0);
 
