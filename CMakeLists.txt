@@ -12,7 +12,7 @@ add_executable(${PROJECT_NAME} WIN32
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE -DUNICODE -D_UNICODE)
 
-# Disable CRT to decrease executable size
+# Link against built-in CRT (MSVCRT.dll) to remove all runtime dependencies
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(${PROJECT_NAME} PRIVATE /GS- /Os)
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DNOCRT -DUSE_MSVCRT)

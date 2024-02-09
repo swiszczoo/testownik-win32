@@ -69,6 +69,16 @@ static void resize_all_screens(int new_width, int new_height)
     SetWindowPos(screen_question_hwnd(&question_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
 }
 
+static HWND current_screen_hwnd(void)
+{
+    switch (current_screen) {
+    case SCREEN_WELCOME: return screen_welcome_hwnd(&welcome_screen);
+    case SCREEN_QUESTION: return screen_question_hwnd(&question_screen);
+    }
+
+    return NULL;
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance,
     HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd)
 {
@@ -195,6 +205,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     case TM_START_GAME:
         event_game_start();
         return 0;
+
+
+    case WM_KEYDOWN:
+    {
+        return SendMessage(current_screen_hwnd(), iMsg, wParam, lParam);
+    }
+
     }
 
     return DefWindowProc(hwnd, iMsg, wParam, lParam);

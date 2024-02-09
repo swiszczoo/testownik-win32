@@ -10,6 +10,7 @@
 #define CLASS_NAME              L"QuestionScreenClass"
 #define MAX_LAYOUT_WIDTH        1600
 #define MARGIN                  50
+#define CHECKED_STATE           3
 #define RADIOBUTTON_STATE       9
 #define CHECKBOX_SIZE           32
 
@@ -142,6 +143,10 @@ static void screen_question_load_next_question(screen_question* instance)
 
     testownik_get_question_info(&instance->current_question);
 
+    for (int i = 0; i < TESTOWNIK_MAX_ANSWERS_PER_QUESTION; ++i) {
+        instance->answer_selected[i] = false;
+    }
+
     screen_question_update_statusbar(instance);
     InvalidateRect(instance->hwnd, NULL, true);
 }
@@ -256,8 +261,16 @@ static void screen_question_paint(screen_question* instance)
         if (!is_pressed) {
             state = instance->answer_hovered == i ? HOVER : NORMAL;
         }
-        else if(instance->answer_hovered == i) {
-            state = instance->answer_pressed == i ? PRESSED : NORMAL;
+        else if (instance->answer_pressed == i) {
+            state = instance->answer_hovered == i ? PRESSED : HOVER;
+        }
+
+        if (instance->answer_selected[i]) {
+            state += CHECKED_STATE;
+        }
+
+        if (instance->current_question.question_type == SINGLE_CHOICE) {
+            state += RADIOBUTTON_STATE;
         }
 
         current_y = screen_question_draw_answer(instance, hdc,
@@ -285,6 +298,28 @@ static void screen_question_paint(screen_question* instance)
 
     SelectObject(hdc, prevFont);
     EndPaint(instance->hwnd, &ps);
+}
+
+static void screen_question_handle_toggle(screen_question* instance, int option)
+{
+    if (instance->current_question.question_type == MULTI_CHOICE) {
+        instance->answer_selected[option] = !instance->answer_selected[option];
+    }
+
+    if (instance->current_question.question_type == SINGLE_CHOICE) {
+        memset(instance->answer_selected, 0, sizeof(instance->answer_selected));
+        instance->answer_selected[option] = true;
+    }
+
+    int selected_answers = 0;
+    for (int i = 0; i < TESTOWNIK_MAX_ANSWERS_PER_QUESTION; ++i) {
+        if (instance->answer_selected[i]) {
+            ++selected_answers;
+        }
+    }
+
+    EnableWindow(button_modern_hwnd(&instance->check_next_btn), selected_answers > 0);
+    InvalidateRect(instance->hwnd, NULL, TRUE);
 }
 
 LRESULT CALLBACK screen_question_wndproc(
@@ -356,14 +391,75 @@ LRESULT CALLBACK screen_question_wndproc(
         }
         return 0;
     }
+
     case WM_MOUSELEAVE:
     {
         if (instance->answer_hovered != -1 || instance->answer_pressed != -1) {
             instance->answer_hovered = -1;
             instance->answer_pressed = -1;
+            InvalidateRect(hwnd, NULL, TRUE);
         }
         
-        InvalidateRect(hwnd, NULL, TRUE);
+        return 0;
+    }
+
+    case WM_LBUTTONDOWN:
+    {
+        TRACKMOUSEEVENT me;
+        ZeroMemory(&me, sizeof(me));
+        me.cbSize = sizeof(TRACKMOUSEEVENT);
+        me.dwFlags = TME_HOVER | TME_LEAVE;
+        me.hwndTrack = hwnd;
+        me.dwHoverTime = HOVER_DEFAULT;
+        TrackMouseEvent(&me);
+
+        int x = LOWORD(lParam);
+        int y = HIWORD(lParam);
+        if (instance->answer_pressed != instance->answer_hovered) {
+            instance->answer_pressed = instance->answer_hovered;
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
+
+        return 0;
+    }
+
+    case WM_LBUTTONUP:
+    {
+        if (instance->answer_pressed == instance->answer_hovered
+            && instance->answer_pressed >= 0) {
+
+            screen_question_handle_toggle(instance, instance->answer_pressed);
+        }
+
+        if (instance->answer_pressed >= 0) {
+            instance->answer_pressed = -1;
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
+
+        return 0;
+    }
+
+    case WM_KEYDOWN:
+    {
+        WORD key_flags = HIWORD(lParam);
+        WORD scan_code = LOBYTE(key_flags);
+
+        WCHAR buffer[16];
+        BYTE kbd_state[256];
+        if (!GetKeyboardState(kbd_state)) {
+            return 0;
+        }
+
+        int size = ToUnicode(wParam, scan_code, kbd_state, buffer, 16, 0);
+        if (size == 1) {
+            for (int i = 0; i < TESTOWNIK_MAX_ANSWERS_PER_QUESTION; ++i) {
+                if (instance->current_question.answer_symbol[i] == buffer[0]) {
+                    screen_question_handle_toggle(instance, i);
+                    return 0;
+                }
+            }
+        }
+
         return 0;
     }
 

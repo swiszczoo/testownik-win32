@@ -20,6 +20,7 @@ typedef struct {
     HFONT hint_fnt;
 
     RECT answer_rect[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
+    bool answer_selected[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
     int answer_hovered;
     int answer_pressed;
 } screen_question;

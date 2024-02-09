@@ -16,7 +16,7 @@ void button_modern_create(HWND parent, button_modern* instance, LPCWSTR text,
     int x, int y, int width, int height)
 {
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, L"BUTTON", text,
-        BS_PUSHBUTTON | WS_TABSTOP | WS_CHILD | WS_VISIBLE, x, y, width, height, parent,
+        BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE, x, y, width, height, parent,
         NULL, GetModuleHandle(NULL), NULL);
     instance->org_proc = (WNDPROC)SetWindowLongPtr(
         instance->hwnd, GWLP_WNDPROC, (LONG_PTR)button_modern_wndproc);
@@ -182,6 +182,17 @@ LRESULT CALLBACK button_modern_wndproc(
         instance->clicked = false;
         InvalidateRect(hwnd, NULL, TRUE);
         break;
+    }
+
+    case WM_KEYDOWN:
+    {
+        return SendMessage(GetParent(hwnd), msg, wParam, lParam);
+    }
+
+    case WM_SETFOCUS:
+    {
+        SetFocus(GetParent(hwnd));
+        return 0;
     }
 
     }
