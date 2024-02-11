@@ -66,6 +66,10 @@ void screen_question_create(HWND parent, screen_question* instance, HWND status_
     button_modern_set_color(&instance->check_next_btn, RGB(39, 121, 177));
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), FALSE);
 
+    instance->scroll_bar = CreateWindowEx(0, L"SCROLLBAR", NULL,
+        WS_CHILD | WS_VISIBLE | SBS_VERT, 0, 0, 22, 500, instance->hwnd,
+        NULL, GetModuleHandle(NULL), NULL);
+
     instance->bmp_checkboxes = LoadBitmap(
         GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_CHECKBOXES));
     instance->dc_checkboxes = NULL;
@@ -74,6 +78,7 @@ void screen_question_create(HWND parent, screen_question* instance, HWND status_
     instance->question_fnt = create_font(L"Segoe UI", 40, false, false);
     instance->answer_fnt = create_font(L"Segoe UI Semibold", 30, false, false);
     instance->hint_fnt = create_font(L"Segoe UI", 20, false, false);
+    instance->timer_ptr = 0;
 
     instance->answer_hovered = -1;
     instance->answer_pressed = -1;
@@ -117,10 +122,10 @@ static void screen_question_update_statusbar(screen_question* instance)
     SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)buffer);
 
     wsprintf(buffer, L"\tPoprawne: %d", game_state.correct_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
+    SendMessage(instance->status_bar, SB_SETTEXT, 2, (LPARAM)buffer);
 
     wsprintf(buffer, L"\tNiepoprawne: %d", game_state.wrong_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 2, (LPARAM)buffer);
+    SendMessage(instance->status_bar, SB_SETTEXT, 3, (LPARAM)buffer);
 
     int total_answers = game_state.correct_count + game_state.wrong_count;
     int correct_perc = 50;
@@ -131,7 +136,7 @@ static void screen_question_update_statusbar(screen_question* instance)
     }
 
     wsprintf(buffer, L"Skuteczno\u015b\u0107: %d%%", correct_perc);
-    SendMessage(instance->status_bar, SB_SETTEXT, 3, (LPARAM)buffer);
+    SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)buffer);
 }
 
 static void screen_question_load_next_question(screen_question* instance)
@@ -154,6 +159,37 @@ static void screen_question_load_next_question(screen_question* instance)
 void screen_question_run(screen_question* instance)
 {
     screen_question_load_next_question(instance);
+
+    instance->timer_ptr = SetTimer(instance->hwnd, 0, 1000, NULL);
+}
+
+static void screen_question_set_scroll_info(screen_question* instance)
+{
+    RECT client_rect;
+    GetClientRect(instance->hwnd, &client_rect);
+
+    SCROLLINFO si;
+    ZeroMemory(&si, sizeof(si));
+    si.cbSize = sizeof(SCROLLINFO);
+    si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+    si.nMin = 0;
+    si.nMax = instance->total_layout_height + 130;
+    si.nPage = client_rect.bottom - client_rect.top;
+    si.nPos = instance->scroll_position;
+
+
+    if (si.nPos + si.nPage > si.nMax && si.nPos > 0 && instance->total_layout_height > 0) {
+        instance->scroll_position = si.nMax - si.nPage;
+        if (instance->scroll_position < 0) {
+            instance->scroll_position = 0;
+        }
+        si.nPos = instance->scroll_position;
+
+        InvalidateRect(instance->hwnd, NULL, TRUE);
+    }
+
+    SetScrollInfo(instance->scroll_bar, SB_CTL, &si, TRUE);
+    ShowWindow(instance->scroll_bar, si.nMax >= si.nPage ? SW_SHOW : SW_HIDE);
 }
 
 static void screen_question_resize(screen_question* instance, int width, int height)
@@ -171,8 +207,19 @@ static void screen_question_resize(screen_question* instance, int width, int hei
     }
 
     int y = client_rect.bottom - client_rect.top - 130;
+    int y2 = instance->layout_end_y;
+
+    int button_y = max(y, y2);
+
     SetWindowPos(button_modern_hwnd(&instance->check_next_btn), NULL,
-        offset_x + 100, y, viewport_width - 200, 80, SWP_NOOWNERZORDER);
+        offset_x + 100, button_y, viewport_width - 200, 80, SWP_NOOWNERZORDER);
+
+    int scrollbar_width = 22;
+    SetWindowPos(instance->scroll_bar, NULL,
+        client_rect.right - client_rect.left - scrollbar_width, 0,
+        scrollbar_width, client_rect.bottom - client_rect.top, SWP_NOOWNERZORDER);
+
+    screen_question_set_scroll_info(instance);
 }
 
 static int screen_question_draw_answer(screen_question* instance, HDC hdc,
@@ -221,8 +268,9 @@ static void screen_question_paint(screen_question* instance)
     RECT client_rect;
     GetClientRect(instance->hwnd, &client_rect);
 
+    int scroll_y = instance->scroll_position;
     int offset_x = MARGIN;
-    int offset_y = MARGIN;
+    int offset_y = MARGIN - scroll_y;
     int viewport_width = MAX_LAYOUT_WIDTH;
     if (client_rect.right - client_rect.left - MARGIN * 2 < MAX_LAYOUT_WIDTH) {
         viewport_width = client_rect.right - client_rect.left - MARGIN * 2;
@@ -278,6 +326,8 @@ static void screen_question_paint(screen_question* instance)
             viewport_width, state, &instance->answer_rect[i]);
     }
 
+    current_y += 50;
+
     // Draw help text
     SelectObject(hdc, instance->hint_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
@@ -294,6 +344,19 @@ static void screen_question_paint(screen_question* instance)
         break;
     default:
         break;
+    }
+
+    int total_layout_height = current_y + scroll_y;
+    int layout_end_y = current_y;
+
+    if (total_layout_height != instance->total_layout_height
+        || layout_end_y != instance->layout_end_y) {
+
+        instance->total_layout_height = total_layout_height;
+        instance->layout_end_y = layout_end_y;
+
+        screen_question_resize(instance, client_rect.right - client_rect.left,
+            client_rect.bottom - client_rect.top);
     }
 
     SelectObject(hdc, prevFont);
@@ -319,6 +382,62 @@ static void screen_question_handle_toggle(screen_question* instance, int option)
     }
 
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), selected_answers > 0);
+    InvalidateRect(instance->hwnd, NULL, TRUE);
+}
+
+static void screen_question_handle_vscroll(screen_question* instance,
+    WPARAM wParam, LPARAM lParam)
+{
+    SCROLLINFO si;
+    ZeroMemory(&si, sizeof(si));
+    si.cbSize = sizeof(SCROLLINFO);
+    si.fMask = SIF_POS | SIF_PAGE | SIF_TRACKPOS | SIF_RANGE;
+    GetScrollInfo(instance->scroll_bar, SB_CTL, &si);
+
+    instance->scroll_position = si.nPos;
+    int max_pos = si.nMax - si.nPage;
+    static const int INCREMENT = 15;
+
+    switch (LOWORD(wParam)) {
+    case SB_TOP:
+        instance->scroll_position = 0;
+        break;
+    case SB_BOTTOM:
+        instance->scroll_position = max_pos;
+        break;
+    case SB_LINEUP:
+        instance->scroll_position -= INCREMENT;
+        if (instance->scroll_position < 0) {
+            instance->scroll_position = 0;
+        }
+        break;
+    case SB_LINEDOWN:
+        instance->scroll_position += INCREMENT;
+        if (instance->scroll_position > max_pos) {
+            instance->scroll_position = max_pos;
+        }
+        break;
+    case SB_PAGEUP:
+        instance->scroll_position -= si.nPage;
+        if (instance->scroll_position < 0) {
+            instance->scroll_position = 0;
+        }
+        break;
+    case SB_PAGEDOWN:
+        instance->scroll_position += si.nPage;
+        if (instance->scroll_position > max_pos) {
+            instance->scroll_position = max_pos;
+        }
+        break;
+    case SB_THUMBPOSITION:
+        instance->scroll_position = si.nTrackPos;
+        break;
+    case SB_THUMBTRACK:
+        instance->scroll_position = si.nTrackPos;
+        break;
+    }
+
+    screen_question_set_scroll_info(instance);
     InvalidateRect(instance->hwnd, NULL, TRUE);
 }
 
@@ -399,7 +518,7 @@ LRESULT CALLBACK screen_question_wndproc(
             instance->answer_pressed = -1;
             InvalidateRect(hwnd, NULL, TRUE);
         }
-        
+
         return 0;
     }
 
@@ -461,6 +580,62 @@ LRESULT CALLBACK screen_question_wndproc(
         }
 
         return 0;
+    }
+
+    case WM_TIMER:
+    {
+        if (!testownik_is_game_in_progress()) {
+            KillTimer(hwnd, wParam);
+            return 0;
+        }
+
+        TCHAR buffer[256];
+        int total_seconds = testownik_get_game_seconds_elapsed();
+        int hours = total_seconds / 3600;
+        int minutes = total_seconds / 60 - hours * 60;
+        int seconds = total_seconds - minutes * 60;
+
+        wsprintf(buffer, L"\tCzas nauki: %02d:%02d:%02d", hours, minutes, seconds);
+        SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
+        return 0;
+    }
+
+    case WM_VSCROLL:
+    {
+        if (instance) {
+            screen_question_handle_vscroll(instance, wParam, lParam);
+            return 0;
+        }
+        break;
+    }
+
+    case WM_MOUSEWHEEL:
+    {
+        int raw_delta = GET_WHEEL_DELTA_WPARAM(wParam);
+        int actual_delta = -raw_delta / 2;
+
+        SCROLLINFO si;
+        ZeroMemory(&si, sizeof(si));
+        si.cbSize = sizeof(SCROLLINFO);
+        si.fMask = SIF_POS | SIF_PAGE | SIF_TRACKPOS | SIF_RANGE;
+        GetScrollInfo(instance->scroll_bar, SB_CTL, &si);
+
+        int max_pos = si.nMax - si.nPage;
+
+        instance->scroll_position += actual_delta;
+        if (instance->scroll_position > max_pos) {
+            instance->scroll_position = max_pos;
+        }
+
+        if (instance->scroll_position < 0) {
+            instance->scroll_position = 0;
+        }
+
+        if (instance) {
+            screen_question_set_scroll_info(instance);
+            InvalidateRect(instance->hwnd, NULL, TRUE);
+        }
+        break;
     }
 
     }

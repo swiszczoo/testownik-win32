@@ -9,6 +9,7 @@
 
 #include <memory.h>
 #include <string.h>
+#include <time.h>
 #include <wchar.h>
 
 #define MAX_QUESTION_SIZE               (1 << 20)
@@ -26,6 +27,7 @@ typedef struct {
     bool is_game_in_progress;
     testownik_game_state game;
     testownik_question_info current_question;
+    time_t game_start_time;
 } testownik;
 
 typedef struct {
@@ -391,7 +393,9 @@ static void testownik_prepare_initial_state(void)
     for (int i = 0; i < total_question_count; ++i) {
         APP.question_order[i] = i;
         APP.questions_correct[i] = false;
-        APP.questions_active[i] = true;
+        //APP.questions_active[i] = true;
+        // TODO: remove this (for clipping testing)
+        APP.questions_active[i] = i == 302;
     }
 
     APP.game.current_question = 0;
@@ -501,6 +505,7 @@ void testownik_start_game(testownik_config* game_config)
     }
 
     APP.is_game_in_progress = true;
+    APP.game_start_time = time(NULL);
 }
 
 void testownik_get_game_state(testownik_game_state* out)
@@ -540,6 +545,11 @@ static void testownik_update_current_question_state()
     }
 }
 
+bool testownik_is_game_in_progress(void)
+{
+    return APP.is_game_in_progress;
+}
+
 bool testownik_move_to_next_question(void)
 {
     if (!APP.is_game_in_progress) {
@@ -557,6 +567,8 @@ bool testownik_move_to_next_question(void)
             testownik_update_current_question_state();
             return true;
         }
+
+        ++APP.game.current_question_real_idx;
     }
 
     // There are no more questions
@@ -572,5 +584,14 @@ bool testownik_get_question_info(testownik_question_info* info)
     }
 
     return false;
+}
+
+int testownik_get_game_seconds_elapsed(void)
+{
+    if (!APP.is_game_in_progress) {
+        return 0;
+    }
+
+    return (int)(time(NULL) - APP.game_start_time);
 }
 

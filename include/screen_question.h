@@ -9,6 +9,7 @@ typedef struct {
     HWND status_bar;
 
     button_modern check_next_btn;
+    HWND scroll_bar;
 
     HBITMAP bmp_checkboxes;
     HDC dc_checkboxes;
@@ -18,6 +19,11 @@ typedef struct {
     HFONT question_fnt;
     HFONT answer_fnt;
     HFONT hint_fnt;
+    UINT_PTR timer_ptr;
+
+    int scroll_position;
+    int total_layout_height;
+    int layout_end_y;
 
     RECT answer_rect[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
     bool answer_selected[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];

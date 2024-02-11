@@ -186,13 +186,13 @@ LRESULT CALLBACK button_modern_wndproc(
 
     case WM_KEYDOWN:
     {
+        SetFocus(GetParent(hwnd));
         return SendMessage(GetParent(hwnd), msg, wParam, lParam);
     }
 
-    case WM_SETFOCUS:
+    case WM_MOUSEACTIVATE:
     {
-        SetFocus(GetParent(hwnd));
-        return 0;
+        return MA_NOACTIVATE;
     }
 
     }

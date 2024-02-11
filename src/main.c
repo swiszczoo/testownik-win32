@@ -145,10 +145,8 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
         while (GetMessage(&msg, NULL, 0, 0))
         {
-            if (!IsDialogMessage(hwnd, &msg)) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
     }
 
@@ -174,8 +172,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     case WM_GETMINMAXINFO:
     {
         LPMINMAXINFO minMax = (LPMINMAXINFO)lParam;
-        minMax->ptMinTrackSize.x = 800;
-        minMax->ptMinTrackSize.y = 700;
+        minMax->ptMinTrackSize.x = 1200;
+        minMax->ptMinTrackSize.y = 850;
         return 0;
     }
 
@@ -188,8 +186,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
 
-        int statusBarParts[] = {width - 700, width - 500, width - 300, -1 };
-        SendMessage(status_bar, SB_SETPARTS, 4, (LPARAM)statusBarParts);
+        int statusBarParts[] = {width - 900, width - 700, width - 500, width - 300, -1 };
+        SendMessage(status_bar, SB_SETPARTS, 5, (LPARAM)statusBarParts);
         SendMessage(status_bar, WM_SIZE, 0, 0);
 
         RECT status_rect;

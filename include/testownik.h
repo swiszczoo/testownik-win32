@@ -56,5 +56,7 @@ const testownik_config* testownik_get_configuration(void);
 void testownik_start_game(testownik_config* game_config);
 void testownik_get_game_state(testownik_game_state* out);
 
+bool testownik_is_game_in_progress(void);
 bool testownik_move_to_next_question(void);
 bool testownik_get_question_info(testownik_question_info* info);
+int testownik_get_game_seconds_elapsed(void);
