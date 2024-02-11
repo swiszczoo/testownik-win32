@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <string.h>
 
+#include <image_decoder.h>
 #include <messages.h>
 #include <random.h>
 #include <resource.h>
@@ -92,11 +93,19 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     init_comm_ctrl();
     random_init();
     testownik_init();
+
     if (CoInitialize(NULL) != S_OK) {
-        MessageBox(NULL, L"Can't initialize COM library. Exiting.", NULL, MB_ICONERROR);
+        MessageBox(NULL,
+            L"Nie uda\u0142o si\u0119 zainicjalizowa\u0107 biblioteki COM.",
+            NULL, MB_ICONERROR);
+
         ExitProcess(1);
         return 1;
     }
+
+    image_decoder_init();
+
+    HBITMAP test = image_decoder_file_to_hbitmap(L"C:\\Users\\lukas\\Desktop\\problem.png");
 
     HWND hwnd;
     MSG msg;
@@ -151,6 +160,7 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     }
 
     destroy_screens();
+    image_decoder_destroy();
 
     ExitProcess(0);
     return 0;

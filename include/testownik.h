@@ -39,6 +39,7 @@ typedef enum {
 typedef struct {
     int question_number;
     LPCTSTR question_text;
+    WCHAR question_image_path[MAX_PATH + 16];
     testownik_question_type question_type;
     int answer_count;
     int answer_id[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];

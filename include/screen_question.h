@@ -16,6 +16,10 @@ typedef struct {
     HBITMAP dc_checkboxes_orig;
     testownik_question_info current_question;
 
+    HBITMAP question_bmp;
+    HDC question_dc;
+    HBITMAP question_dc_orig;
+
     HFONT question_fnt;
     HFONT answer_fnt;
     HFONT hint_fnt;

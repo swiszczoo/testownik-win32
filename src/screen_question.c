@@ -1,5 +1,6 @@
 #include <screen_question.h>
 
+#include <image_decoder.h>
 #include <resource.h>
 #include <utils.h>
 
@@ -75,6 +76,8 @@ void screen_question_create(HWND parent, screen_question* instance, HWND status_
     instance->dc_checkboxes = NULL;
     instance->dc_checkboxes_orig = NULL;
 
+    instance->question_bmp = NULL;
+
     instance->question_fnt = create_font(L"Segoe UI", 40, false, false);
     instance->answer_fnt = create_font(L"Segoe UI Semibold", 30, false, false);
     instance->hint_fnt = create_font(L"Segoe UI", 20, false, false);
@@ -148,6 +151,28 @@ static void screen_question_load_next_question(screen_question* instance)
 
     testownik_get_question_info(&instance->current_question);
 
+    if (instance->question_dc) {
+        SelectObject(instance->question_dc, instance->question_dc_orig);
+        DeleteDC(instance->question_dc);
+        instance->question_dc = instance->question_dc_orig = NULL;
+    }
+
+    if (instance->question_bmp) {
+        DeleteBitmap(instance->question_bmp);
+        instance->question_bmp = NULL;
+    }
+
+    if (instance->current_question.question_image_path[0] != L'\0') {
+        instance->question_bmp = image_decoder_file_to_hbitmap(
+            instance->current_question.question_image_path);
+
+        if (!instance->question_bmp) {
+            MessageBox(instance->hwnd,
+                L"To pytanie zawiera obrazek, ale nie uda\u0142o si\u0119 go wczytać.",
+                L"Uwaga", MB_ICONWARNING);
+        }
+    }
+
     for (int i = 0; i < TESTOWNIK_MAX_ANSWERS_PER_QUESTION; ++i) {
         instance->answer_selected[i] = false;
     }
@@ -220,6 +245,45 @@ static void screen_question_resize(screen_question* instance, int width, int hei
         scrollbar_width, client_rect.bottom - client_rect.top, SWP_NOOWNERZORDER);
 
     screen_question_set_scroll_info(instance);
+}
+
+static int screen_question_draw_image(screen_question* instance, HDC hdc,
+    int offset_x, int offset_y, int viewport_width)
+{
+    BITMAP question_bmp;
+    GetObject(instance->question_bmp, sizeof(BITMAP), &question_bmp);
+
+    int bitmap_width = question_bmp.bmWidth;
+    int bitmap_height = question_bmp.bmHeight;
+
+    int target_width = bitmap_width;
+    int target_height = bitmap_height;
+
+    int max_width = viewport_width / 2;
+
+    if (bitmap_width > max_width) {
+        target_width = max_width;
+        target_height = bitmap_height * max_width / bitmap_width;
+    }
+
+    int bitmap_x = offset_x + (viewport_width - target_width) / 2;
+
+    if (!instance->question_dc) {
+        instance->question_dc = CreateCompatibleDC(hdc);
+        instance->question_dc_orig = SelectObject(instance->question_dc,
+            instance->question_bmp);
+    }
+
+    BLENDFUNCTION blend;
+    blend.BlendOp = AC_SRC_OVER;
+    blend.BlendFlags = 0;
+    blend.SourceConstantAlpha = 255;
+    blend.AlphaFormat = AC_SRC_ALPHA;
+
+    AlphaBlend(hdc, bitmap_x, offset_y, target_width, target_height,
+        instance->question_dc, 0, 0, bitmap_width, bitmap_height, blend);
+
+    return offset_y + target_height;
 }
 
 static int screen_question_draw_answer(screen_question* instance, HDC hdc,
@@ -299,8 +363,17 @@ static void screen_question_paint(screen_question* instance)
     DrawText(hdc, instance->current_question.question_text, -1,
         &question_text_rect, DT_WORDBREAK | DT_NOCLIP);
 
+    // Draw question image if it exists
+    int current_y = question_text_rect.bottom;
+    if (instance->question_bmp) {
+        current_y = screen_question_draw_image(instance, hdc,
+            offset_x, current_y + 20, viewport_width);
+    }
+
     // Draw answers
-    int current_y = question_text_rect.bottom + 75;
+    int help_text_y = current_y + 40;
+    current_y += 75;
+
     bool is_pressed = instance->answer_pressed >= 0;
     SelectObject(hdc, instance->answer_fnt);
 
@@ -331,8 +404,8 @@ static void screen_question_paint(screen_question* instance)
     // Draw help text
     SelectObject(hdc, instance->hint_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
-    RECT hint_rect = { offset_x + 64, question_text_rect.bottom + 40,
-        offset_x + viewport_width, question_text_rect.bottom + 75 };
+    RECT hint_rect = { offset_x + 64, help_text_y,
+        offset_x + viewport_width, help_text_y + 35 };
     switch (instance->current_question.question_type) {
     case MULTI_CHOICE:
         DrawText(hdc, L"Zaznacz wszystkie poprawne odpowiedzi:", -1,

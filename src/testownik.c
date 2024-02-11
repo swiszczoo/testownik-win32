@@ -198,7 +198,7 @@ static bool testownik_parse_question(LPWSTR content, testownik_question* out)
     while (true) {
         WCHAR wc = content[current_offset];
         int previous_offset = 0;
-        WCHAR previous_char = '\0';
+        WCHAR previous_char = L'\0';
         if (wc != ';') {
             break; // no more options
         }
@@ -211,7 +211,7 @@ static bool testownik_parse_question(LPWSTR content, testownik_question* out)
             if (tmp == L';' || tmp == '\r' || tmp == '\n') {
                 previous_offset = offset;
                 previous_char = tmp;
-                content[offset] = '\0';
+                content[offset] = L'\0';
                 break;
             }
         }
@@ -292,7 +292,7 @@ static bool testownik_load_question(LPCWSTR path, testownik_question* out)
         goto error;
     }
 
-    content_buffer[file_size.QuadPart] = '\0';
+    content_buffer[file_size.QuadPart] = L'\0';
 
     DWORD bytes_read;
     DWORD total_size = file_size.LowPart;
@@ -393,9 +393,7 @@ static void testownik_prepare_initial_state(void)
     for (int i = 0; i < total_question_count; ++i) {
         APP.question_order[i] = i;
         APP.questions_correct[i] = false;
-        //APP.questions_active[i] = true;
-        // TODO: remove this (for clipping testing)
-        APP.questions_active[i] = i == 302;
+        APP.questions_active[i] = true;
     }
 
     APP.game.current_question = 0;
@@ -524,6 +522,19 @@ static void testownik_update_current_question_state()
     APP.current_question.question_text = question->question_text;
     APP.current_question.question_type = MULTI_CHOICE;
 
+    APP.current_question.question_image_path[0] = L'\0';
+    if (question->image_path) {
+        wcscpy(APP.current_question.question_image_path, APP.db_path);
+        PathCchCombine(APP.current_question.question_image_path, MAX_PATH + 16,
+            APP.current_question.question_image_path, L"img");
+        PathCchCombine(APP.current_question.question_image_path, MAX_PATH + 16,
+            APP.current_question.question_image_path, question->image_path);
+
+        if (!PathFileExists(APP.current_question.question_image_path)) {
+            APP.current_question.question_image_path[0] = L'\0';
+        }
+    }
+
     if (question->correct_answer_count == 1 && !APP.config.always_multiselect) {
         APP.current_question.question_type = SINGLE_CHOICE;
     }
@@ -533,7 +544,7 @@ static void testownik_update_current_question_state()
         APP.current_question.answer_id[i] = i;
     }
 
-    if (APP.config.shuffle_answers) {
+    if (APP.config.shuffle_answers && !question->no_shuffle) {
         random_shuffle_int_array(
             APP.current_question.answer_id, question->total_answer_count);
     }

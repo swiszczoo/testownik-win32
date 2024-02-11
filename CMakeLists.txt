@@ -10,6 +10,7 @@ add_executable(${PROJECT_NAME} WIN32
     win32/testownik.manifest
     win32/testownik.rc
 )
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE -DUNICODE -D_UNICODE)
 
 # Link against built-in CRT (MSVCRT.dll) to remove all runtime dependencies
@@ -21,7 +22,15 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_link_libraries(${PROJECT_NAME} PRIVATE msvcrt-light-x64)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE comctl32 pathcch shlwapi ole32 shell32)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    comctl32
+    pathcch
+    shlwapi
+    ole32
+    shell32
+    windowscodecs
+    msimg32
+)
 target_include_directories(${PROJECT_NAME} PRIVATE include win32)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "Testownik")
