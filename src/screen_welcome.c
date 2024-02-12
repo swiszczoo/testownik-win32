@@ -308,6 +308,7 @@ LRESULT CALLBACK screen_welcome_wndproc(
             screen_welcome_paint(instance);
             return 0;
         }
+        break;
     }
     case WM_CTLCOLORBTN:
     case WM_CTLCOLORSTATIC:

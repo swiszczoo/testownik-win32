@@ -26,6 +26,7 @@ static screen_welcome welcome_screen;
 static screen_question question_screen;
 
 static HWND status_bar;
+static performance_bar perf_bar;
 
 static void init_comm_ctrl(void)
 {
@@ -45,7 +46,7 @@ static void register_screens(void)
 static void create_screens(HWND parent)
 {
     screen_welcome_create(parent, &welcome_screen, status_bar);
-    screen_question_create(parent, &question_screen, status_bar);
+    screen_question_create(parent, &question_screen, status_bar, &perf_bar);
 }
 
 static void set_current_screen(screen new_screen)
@@ -55,6 +56,8 @@ static void set_current_screen(screen new_screen)
     ShowWindow(screen_welcome_hwnd(&welcome_screen),
         new_screen == SCREEN_WELCOME ? SW_SHOW : SW_HIDE);
     ShowWindow(screen_question_hwnd(&question_screen),
+        new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
+    ShowWindow(performance_bar_hwnd(&perf_bar),
         new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
 }
 
@@ -68,6 +71,15 @@ static void resize_all_screens(int new_width, int new_height)
 {
     SetWindowPos(screen_welcome_hwnd(&welcome_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
     SetWindowPos(screen_question_hwnd(&question_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
+
+    RECT status_rect;
+    GetClientRect(status_bar, &status_rect);
+
+    int y = (status_rect.bottom - status_rect.top - 20) / 2 + 1;
+    int text_width = 110 * GetDpiForWindow(status_bar) / USER_DEFAULT_SCREEN_DPI;
+
+    SetWindowPos(performance_bar_hwnd(&perf_bar), NULL,
+        new_width - 300 + text_width, y, 300 - text_width - 30, 20, SWP_NOOWNERZORDER);
 }
 
 static HWND current_screen_hwnd(void)
@@ -140,6 +152,9 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     status_bar = CreateWindow(STATUSCLASSNAME, NULL,
         SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, hInstance, NULL);
+
+    performance_bar_register();
+    performance_bar_create(status_bar, &perf_bar, 0, 0, 0, 0);
 
     register_screens();
     create_screens(hwnd);

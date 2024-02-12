@@ -61,7 +61,7 @@ static const LPCWSTR STR_CORRECT_MSGS[MESSAGES_PER_CATEGORY] = {
 
 static const LPCWSTR STR_PARTIALLY_MSGS[MESSAGES_PER_CATEGORY] = {
     L"Prawie dobrze!",
-    L"Cz\u0119\u015b\ciowo poprawnie!",
+    L"Cz\u0119\u015bciowo poprawnie!",
     L"Jeszcze to!",
     L"Zabrak\u0142o tego!",
     L"Ju\u017c prawie dobrze...",
@@ -73,7 +73,7 @@ static const LPCWSTR STR_PARTIALLY_MSGS[MESSAGES_PER_CATEGORY] = {
 };
 
 static const LPCWSTR STR_WRONG_MSGS[MESSAGES_PER_CATEGORY] = {
-    L"B\u0142edna odpowied\u017a!",
+    L"B\u0142\u0119dna odpowied\u017a!",
     L"Niezbyt...",
     L"Nie!",
     L"Niestety, nie!",
@@ -108,9 +108,11 @@ HWND screen_question_hwnd(screen_question* instance)
     return instance->hwnd;
 }
 
-void screen_question_create(HWND parent, screen_question* instance, HWND status_bar)
+void screen_question_create(HWND parent, screen_question* instance,
+    HWND status_bar, performance_bar* perf_bar)
 {
     instance->status_bar = status_bar;
+    instance->performance_bar = perf_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
         WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE,
         0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
@@ -210,6 +212,8 @@ static void screen_question_update_statusbar(screen_question* instance)
 
     wsprintf(buffer, L"Skuteczno\u015b\u0107: %d%%", correct_perc);
     SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)buffer);
+
+    performance_bar_set_value(instance->performance_bar, correct_perc);
 }
 
 static void screen_question_load_next_question(screen_question* instance)
