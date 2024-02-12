@@ -36,6 +36,13 @@ typedef enum {
     SHOULD_BE_SELECTED,
 } testownik_answer_state;
 
+typedef enum {
+    QUESTION,
+    CORRECT,
+    WRONG,
+    PARTIALLY_CORRECT
+} testownik_question_result;
+
 typedef struct {
     int question_number;
     LPCTSTR question_text;
@@ -46,6 +53,7 @@ typedef struct {
     WCHAR answer_symbol[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
     LPCTSTR answer_text[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
     testownik_answer_state answer_state[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
+    testownik_question_result result;
 } testownik_question_info;
 
 void testownik_init(void);
@@ -61,3 +69,4 @@ bool testownik_is_game_in_progress(void);
 bool testownik_move_to_next_question(void);
 bool testownik_get_question_info(testownik_question_info* info);
 int testownik_get_game_seconds_elapsed(void);
+bool testownik_check_answer(bool checked[TESTOWNIK_MAX_ANSWERS_PER_QUESTION]);

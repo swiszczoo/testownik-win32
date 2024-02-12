@@ -25,6 +25,10 @@ typedef struct {
     HFONT hint_fnt;
     UINT_PTR timer_ptr;
 
+    HBRUSH correct_bg_brush;
+    HBRUSH wrong_bg_brush;
+    HBRUSH partially_bg_brush;
+
     int scroll_position;
     int total_layout_height;
     int layout_end_y;
@@ -33,6 +37,9 @@ typedef struct {
     bool answer_selected[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
     int answer_hovered;
     int answer_pressed;
+
+    bool correct_answer_shown;
+    LPCWSTR correct_answer_message;
 } screen_question;
 
 void screen_question_register();

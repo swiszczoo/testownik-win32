@@ -1,6 +1,8 @@
 #include <screen_question.h>
 
+#include <assert.h>
 #include <image_decoder.h>
+#include <random.h>
 #include <resource.h>
 #include <utils.h>
 
@@ -14,6 +16,17 @@
 #define CHECKED_STATE           3
 #define RADIOBUTTON_STATE       9
 #define CHECKBOX_SIZE           32
+
+#define NORMAL_COLOR            RGB(39, 121, 177)
+
+#define CORRECT_COLOR           RGB(34, 175, 67)
+#define WRONG_COLOR             RGB(176, 40, 38)
+#define PARTIALLY_COLOR         RGB(175, 95, 34)
+
+#define CORRECT_BG              RGB(228, 250, 233)
+#define WRONG_BG                RGB(249, 228, 227)
+#define PARTIALLY_BG            RGB(250, 236, 226)
+
 
 typedef enum {
     NORMAL,
@@ -30,6 +43,47 @@ typedef enum {
 static const LPCWSTR STR_CHECK_ANSWER = L"Sprawd\u017a odpowied\u017a...";
 static const LPCWSTR STR_NEXT_QUESTION = L"Nast\u0119pne pytanie...";
 static ATOM class_atom;
+
+#define MESSAGES_PER_CATEGORY   10
+
+static const LPCWSTR STR_CORRECT_MSGS[MESSAGES_PER_CATEGORY] = {
+    L"Dobrze!",
+    L"Poprawna odpowied\u017a!",
+    L"\u015awietnie!",
+    L"Doskonale!",
+    L"Idealnie!",
+    L"Brawo!",
+    L"Dobra odpowied\u017a!",
+    L"Wszystko poprawnie!",
+    L"Tak!",
+    L"Zgadza si\u0119!",
+};
+
+static const LPCWSTR STR_PARTIALLY_MSGS[MESSAGES_PER_CATEGORY] = {
+    L"Prawie dobrze!",
+    L"Cz\u0119\u015b\ciowo poprawnie!",
+    L"Jeszcze to!",
+    L"Zabrak\u0142o tego!",
+    L"Ju\u017c prawie dobrze...",
+    L"By\u0142o blisko!",
+    L"Prawie tak!",
+    L"By\u0142o wi\u0119cej poprawnych!",
+    L"Ca\u0142kiem, ca\u0142kiem...",
+    L"Blisko!",
+};
+
+static const LPCWSTR STR_WRONG_MSGS[MESSAGES_PER_CATEGORY] = {
+    L"B\u0142edna odpowied\u017a!",
+    L"Niezbyt...",
+    L"Nie!",
+    L"Niestety, nie!",
+    L"Jest inaczej...",
+    L"B\u0142\u0105d!",
+    L"Nieprawda.",
+    L"Spr\u00f3buj p\u00f3\u017aniej!",
+    L"To nie tak!",
+    L"Niepoprawna odpowied\u017a!",
+};
 
 void screen_question_register() {
     WNDCLASSEX wcex;
@@ -64,7 +118,7 @@ void screen_question_create(HWND parent, screen_question* instance, HWND status_
 
     button_modern_create(instance->hwnd, &instance->check_next_btn,
         STR_CHECK_ANSWER, 0, 0, 250, 80);
-    button_modern_set_color(&instance->check_next_btn, RGB(39, 121, 177));
+    button_modern_set_color(&instance->check_next_btn, NORMAL_COLOR);
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), FALSE);
 
     instance->scroll_bar = CreateWindowEx(0, L"SCROLLBAR", NULL,
@@ -82,6 +136,10 @@ void screen_question_create(HWND parent, screen_question* instance, HWND status_
     instance->answer_fnt = create_font(L"Segoe UI Semibold", 30, false, false);
     instance->hint_fnt = create_font(L"Segoe UI", 20, false, false);
     instance->timer_ptr = 0;
+
+    instance->correct_bg_brush = CreateSolidBrush(CORRECT_BG);
+    instance->wrong_bg_brush = CreateSolidBrush(WRONG_BG);
+    instance->partially_bg_brush = CreateSolidBrush(PARTIALLY_BG);
 
     instance->answer_hovered = -1;
     instance->answer_pressed = -1;
@@ -110,6 +168,18 @@ void screen_question_destroy(screen_question* instance)
 
     if (instance->hint_fnt) {
         DeleteObject(instance->hint_fnt);
+    }
+
+    if (instance->correct_bg_brush) {
+        DeleteObject(instance->correct_bg_brush);
+    }
+
+    if (instance->wrong_bg_brush) {
+        DeleteObject(instance->wrong_bg_brush);
+    }
+
+    if (instance->partially_bg_brush) {
+        DeleteObject(instance->partially_bg_brush);
     }
 }
 
@@ -177,15 +247,23 @@ static void screen_question_load_next_question(screen_question* instance)
         instance->answer_selected[i] = false;
     }
 
+    instance->correct_answer_message = NULL;
+    instance->correct_answer_shown = false;
+
+    SetWindowText(button_modern_hwnd(&instance->check_next_btn), STR_CHECK_ANSWER);
+    EnableWindow(button_modern_hwnd(&instance->check_next_btn), false);
+    SetFocus(instance->hwnd);
+    button_modern_set_color(&instance->check_next_btn, NORMAL_COLOR);
     screen_question_update_statusbar(instance);
     InvalidateRect(instance->hwnd, NULL, true);
 }
 
 void screen_question_run(screen_question* instance)
 {
+    SetFocus(instance->hwnd);
     screen_question_load_next_question(instance);
 
-    instance->timer_ptr = SetTimer(instance->hwnd, 0, 1000, NULL);
+    instance->timer_ptr = SetTimer(instance->hwnd, 0, 200, NULL);
 }
 
 static void screen_question_set_scroll_info(screen_question* instance)
@@ -215,6 +293,51 @@ static void screen_question_set_scroll_info(screen_question* instance)
 
     SetScrollInfo(instance->scroll_bar, SB_CTL, &si, TRUE);
     ShowWindow(instance->scroll_bar, si.nMax >= si.nPage ? SW_SHOW : SW_HIDE);
+}
+
+static void screen_question_check_answer_next_question(screen_question* instance)
+{
+    if (!instance->correct_answer_shown) {
+        instance->correct_answer_shown = true;
+
+        bool result = testownik_check_answer(instance->answer_selected);
+        if (!result) {
+            assert(false);
+            return;
+        }
+
+        testownik_get_question_info(&instance->current_question);
+        int message_id = random_next_range(MESSAGES_PER_CATEGORY);
+
+        switch (instance->current_question.result) {
+        case CORRECT:
+            button_modern_set_color(&instance->check_next_btn, CORRECT_COLOR);
+            instance->correct_answer_message = STR_CORRECT_MSGS[message_id];
+            break;
+        case WRONG:
+            button_modern_set_color(&instance->check_next_btn, WRONG_COLOR);
+            instance->correct_answer_message = STR_WRONG_MSGS[message_id];
+            break;
+        case PARTIALLY_CORRECT:
+            button_modern_set_color(&instance->check_next_btn, PARTIALLY_COLOR);
+            instance->correct_answer_message = STR_PARTIALLY_MSGS[message_id];
+            break;
+        }
+
+        SetWindowText(button_modern_hwnd(&instance->check_next_btn), STR_NEXT_QUESTION);
+        screen_question_update_statusbar(instance);
+        InvalidateRect(instance->hwnd, NULL, true);
+    }
+    else {
+        screen_question_load_next_question(instance);
+    }
+}
+
+static void screen_question_command(screen_question* instance, HWND sender)
+{
+    if (sender == button_modern_hwnd(&instance->check_next_btn)) {
+        screen_question_check_answer_next_question(instance);
+    }
 }
 
 static void screen_question_resize(screen_question* instance, int width, int height)
@@ -344,7 +467,7 @@ static void screen_question_paint(screen_question* instance)
     }
 
     // Paint code begins here
-    HGDIOBJ prevFont = SelectObject(hdc, instance->question_fnt);
+    HGDIOBJ prev_font = SelectObject(hdc, instance->question_fnt);
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(168, 168, 168));
 
@@ -379,15 +502,27 @@ static void screen_question_paint(screen_question* instance)
 
     for (int i = 0; i < instance->current_question.answer_count; ++i) {
         int state = NORMAL;
-        if (!is_pressed) {
-            state = instance->answer_hovered == i ? HOVER : NORMAL;
-        }
-        else if (instance->answer_pressed == i) {
-            state = instance->answer_hovered == i ? PRESSED : HOVER;
-        }
+        if (instance->current_question.result == QUESTION) {
+            // If result is not yet shown
 
-        if (instance->answer_selected[i]) {
-            state += CHECKED_STATE;
+            if (!is_pressed) {
+                state = instance->answer_hovered == i ? HOVER : NORMAL;
+            }
+            else if (instance->answer_pressed == i) {
+                state = instance->answer_hovered == i ? PRESSED : HOVER;
+            }
+
+            if (instance->answer_selected[i]) {
+                state += CHECKED_STATE;
+            }
+        }
+        else {
+            // If result is already shown
+            static const int states[] = {
+                NORMAL, ANSWER_OK, ANSWER_WRONG, NORMAL, ANSWER_EXPECTED, 
+            };
+
+            state = states[instance->current_question.answer_state[i]];
         }
 
         if (instance->current_question.question_type == SINGLE_CHOICE) {
@@ -399,7 +534,45 @@ static void screen_question_paint(screen_question* instance)
             viewport_width, state, &instance->answer_rect[i]);
     }
 
-    current_y += 50;
+    current_y += 15;
+
+    // Draw answer message rect
+    HBRUSH brush = instance->correct_bg_brush;
+    COLORREF text_color = CORRECT_COLOR;
+
+    switch (instance->current_question.result) {
+    case WRONG:
+        brush = instance->wrong_bg_brush;
+        text_color = WRONG_COLOR;
+        break;
+    case PARTIALLY_CORRECT:
+        brush = instance->partially_bg_brush;
+        text_color = PARTIALLY_COLOR;
+        break;
+    }
+
+    HGDIOBJ prev_brush = SelectObject(hdc, brush);
+    HGDIOBJ prev_pen = SelectObject(hdc, GetStockObject(NULL_PEN));
+
+    if (instance->current_question.result != QUESTION) {
+        SetTextColor(hdc, text_color);
+        SelectObject(hdc, instance->question_fnt);
+        
+        SIZE text_size;
+        DWORD result = GetTextExtentPoint32(hdc,
+            instance->correct_answer_message,
+            wcslen(instance->correct_answer_message), &text_size);
+
+        text_size.cx += 150;
+        int pos_x = (client_rect.right - client_rect.left - text_size.cx) / 2;
+
+        RECT text_rect = { pos_x, current_y, pos_x + text_size.cx, current_y + 80 };
+        Rectangle(hdc, pos_x, current_y, pos_x + text_size.cx, current_y + 80);
+        DrawText(hdc, instance->correct_answer_message, -1, &text_rect,
+            DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+    }
+
+    current_y += 100;
 
     // Draw help text
     SelectObject(hdc, instance->hint_fnt);
@@ -432,12 +605,18 @@ static void screen_question_paint(screen_question* instance)
             client_rect.bottom - client_rect.top);
     }
 
-    SelectObject(hdc, prevFont);
+    SelectObject(hdc, prev_pen);
+    SelectObject(hdc, prev_brush);
+    SelectObject(hdc, prev_font);
     EndPaint(instance->hwnd, &ps);
 }
 
 static void screen_question_handle_toggle(screen_question* instance, int option)
 {
+    if (instance->current_question.result != QUESTION) {
+        return;
+    }
+
     if (instance->current_question.question_type == MULTI_CHOICE) {
         instance->answer_selected[option] = !instance->answer_selected[option];
     }
@@ -456,6 +635,12 @@ static void screen_question_handle_toggle(screen_question* instance, int option)
 
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), selected_answers > 0);
     InvalidateRect(instance->hwnd, NULL, TRUE);
+
+    if (instance->current_question.question_type == SINGLE_CHOICE
+        && testownik_get_configuration()->auto_accept) {
+
+        screen_question_check_answer_next_question(instance);
+    }
 }
 
 static void screen_question_handle_vscroll(screen_question* instance,
@@ -520,6 +705,14 @@ LRESULT CALLBACK screen_question_wndproc(
     screen_question* instance = (screen_question*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
     switch (msg) {
+    case WM_COMMAND:
+    {
+        if (instance) {
+            screen_question_command(instance, (HWND)lParam);
+        }
+        return 0;
+    }
+
     case WM_SIZE:
     {
         int width = LOWORD(lParam);
@@ -649,6 +842,10 @@ LRESULT CALLBACK screen_question_wndproc(
                     screen_question_handle_toggle(instance, i);
                     return 0;
                 }
+            }
+
+            if (buffer[0] == L' ' && IsWindowEnabled(button_modern_hwnd(&instance->check_next_btn))) {
+                screen_question_check_answer_next_question(instance);
             }
         }
 

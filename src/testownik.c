@@ -606,3 +606,59 @@ int testownik_get_game_seconds_elapsed(void)
     return (int)(time(NULL) - APP.game_start_time);
 }
 
+bool testownik_check_answer(bool checked[TESTOWNIK_MAX_ANSWERS_PER_QUESTION])
+{
+    if (!APP.is_game_in_progress) {
+        return false;
+    }
+
+    if (APP.current_question.result != QUESTION) {
+        return false;
+    }
+
+    int question_id = APP.question_order[APP.game.current_question_real_idx];
+    testownik_question* question = (testownik_question*)vec_get(&APP.questions, question_id);
+
+    bool found_correct = false;
+    bool all_correct = true;
+    bool found_wrong = false;
+
+    for (int i = 0; i < APP.current_question.answer_count; ++i) {
+        bool user = checked[i];
+        bool truth = question->answers[APP.current_question.answer_id[i]].is_correct;
+
+        if (user && truth) {
+            found_correct = true;
+            APP.current_question.answer_state[i] = SELECTED_AND_OK;
+        }
+        else if (!user && truth) {
+            all_correct = false;
+            APP.current_question.answer_state[i] = SHOULD_BE_SELECTED;
+        }
+        else if (user && !truth) {
+            found_wrong = true;
+            all_correct = false;
+            APP.current_question.answer_state[i] = SELECTED_AND_WRONG;
+        }
+        else { // !user && !truth
+            APP.current_question.answer_state[i] = NOT_SELECTED_AND_OK;
+        }
+    }
+
+    if (all_correct) {
+        APP.current_question.result = CORRECT;
+        ++APP.game.correct_count;
+        APP.questions_correct[question_id] = true;
+    }
+    else if (!found_wrong && found_correct) {
+        APP.current_question.result = PARTIALLY_CORRECT;
+        ++APP.game.wrong_count;
+    }
+    else {
+        APP.current_question.result = WRONG;
+        ++APP.game.wrong_count;
+    }
+
+    return true;
+}
+

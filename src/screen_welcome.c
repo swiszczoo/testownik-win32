@@ -278,14 +278,6 @@ void screen_welcome_run(screen_welcome* instance)
 
     EnableWindow(button_modern_hwnd(&instance->start_btn), TRUE);
     InvalidateRect(instance->hwnd, NULL, TRUE);
-
-    // TODO: remove this, for tests:
-    testownik_config conf = {0};
-    conf.shuffle_answers = true;
-    conf.shuffle_questions = true;
-    testownik_start_game(&conf);
-
-    PostMessage(GetParent(instance->hwnd), TM_START_GAME, 0, 0);
 }
 
 LRESULT CALLBACK screen_welcome_wndproc(
