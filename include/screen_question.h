@@ -17,6 +17,8 @@ typedef struct {
     HDC dc_checkboxes;
     HBITMAP dc_checkboxes_orig;
     testownik_question_info current_question;
+    int question_number;
+    int total_questions;
 
     HBITMAP question_bmp;
     HDC question_dc;
@@ -30,6 +32,7 @@ typedef struct {
     HBRUSH correct_bg_brush;
     HBRUSH wrong_bg_brush;
     HBRUSH partially_bg_brush;
+    HBRUSH progress_bar_brush;
 
     int scroll_position;
     int total_layout_height;

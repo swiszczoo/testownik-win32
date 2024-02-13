@@ -394,6 +394,7 @@ static void testownik_prepare_initial_state(void)
         APP.question_order[i] = i;
         APP.questions_correct[i] = false;
         APP.questions_active[i] = true;
+        APP.questions_active[i] = i == 302;
     }
 
     APP.game.current_question = 0;

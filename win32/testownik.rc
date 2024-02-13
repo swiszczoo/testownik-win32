@@ -45,10 +45,6 @@ IDI_TESTOWNIK           ICON                    "testownik.ico"
 
 IDI_TESTOWNIK_SM        ICON                    "testownik-sm.ico"
 
-IDI_CORRECT             ICON                    "ic-correct.ico"
-
-IDI_WRONG               ICON                    "ic-wrong.ico"
-
 #endif    // Polski (Polska) resources
 /////////////////////////////////////////////////////////////////////////////
 

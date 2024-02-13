@@ -11,6 +11,7 @@
 #include <resource.h>
 #include <testownik.h>
 
+#include <screen_ending.h>
 #include <screen_question.h>
 #include <screen_welcome.h>
 
@@ -19,11 +20,13 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 typedef enum {
     SCREEN_WELCOME,
     SCREEN_QUESTION,
+    SCREEN_ENDING,
 } screen;
 
 static screen current_screen = -1;
 static screen_welcome welcome_screen;
 static screen_question question_screen;
+static screen_ending ending_screen;
 
 static HWND status_bar;
 static performance_bar perf_bar;
@@ -41,12 +44,14 @@ static void register_screens(void)
 {
     screen_welcome_register();
     screen_question_register();
+    screen_ending_register();
 }
 
 static void create_screens(HWND parent)
 {
     screen_welcome_create(parent, &welcome_screen, status_bar);
     screen_question_create(parent, &question_screen, status_bar, &perf_bar);
+    screen_ending_create(parent, &ending_screen, status_bar);
 }
 
 static void set_current_screen(screen new_screen)
@@ -59,18 +64,22 @@ static void set_current_screen(screen new_screen)
         new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
     ShowWindow(performance_bar_hwnd(&perf_bar),
         new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
+    ShowWindow(screen_ending_hwnd(&ending_screen),
+        new_screen == SCREEN_ENDING ? SW_SHOW : SW_HIDE);
 }
 
 static void destroy_screens(void)
 {
     screen_welcome_destroy(&welcome_screen);
     screen_question_destroy(&question_screen);
+    screen_ending_destroy(&ending_screen);
 }
 
 static void resize_all_screens(int new_width, int new_height)
 {
     SetWindowPos(screen_welcome_hwnd(&welcome_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
     SetWindowPos(screen_question_hwnd(&question_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
+    SetWindowPos(screen_ending_hwnd(&ending_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
 
     RECT status_rect;
     GetClientRect(status_bar, &status_rect);
@@ -87,6 +96,7 @@ static HWND current_screen_hwnd(void)
     switch (current_screen) {
     case SCREEN_WELCOME: return screen_welcome_hwnd(&welcome_screen);
     case SCREEN_QUESTION: return screen_question_hwnd(&question_screen);
+    case SCREEN_ENDING: return screen_ending_hwnd(&ending_screen);
     }
 
     return NULL;
@@ -187,6 +197,12 @@ static void event_game_start(void)
     screen_question_run(&question_screen);
 }
 
+static void event_game_end(void)
+{
+    set_current_screen(SCREEN_ENDING);
+    screen_ending_run(&ending_screen);
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (iMsg)
@@ -229,6 +245,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         event_game_start();
         return 0;
 
+    case TM_END_GAME:
+        event_game_end();
+        return 0;
 
     case WM_KEYDOWN:
     {

@@ -21,7 +21,7 @@
 
 static ATOM class_atom;
 
-void screen_welcome_register() {
+void screen_welcome_register(void) {
     WNDCLASSEX wcex;
     ZeroMemory(&wcex, sizeof(wcex));
 
@@ -267,7 +267,7 @@ static void screen_welcome_paint(screen_welcome* instance)
 
 void screen_welcome_run(screen_welcome* instance)
 {
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L"Testownik win32 - konfiguracja");
+    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L" Testownik \u2014 konfiguracja");
 
     bool ok = testownik_try_load_database();
     if (!ok) {

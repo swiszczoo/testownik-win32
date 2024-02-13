@@ -1,11 +1,12 @@
 #include <screen_question.h>
 
-#include <assert.h>
 #include <image_decoder.h>
+#include <messages.h>
 #include <random.h>
 #include <resource.h>
 #include <utils.h>
 
+#include <assert.h>
 #include <CommCtrl.h>
 #include <math.h>
 #include <windowsx.h>
@@ -142,6 +143,7 @@ void screen_question_create(HWND parent, screen_question* instance,
     instance->correct_bg_brush = CreateSolidBrush(CORRECT_BG);
     instance->wrong_bg_brush = CreateSolidBrush(WRONG_BG);
     instance->partially_bg_brush = CreateSolidBrush(PARTIALLY_BG);
+    instance->progress_bar_brush = CreateSolidBrush(NORMAL_COLOR);
 
     instance->answer_hovered = -1;
     instance->answer_pressed = -1;
@@ -149,39 +151,55 @@ void screen_question_create(HWND parent, screen_question* instance,
 
 void screen_question_destroy(screen_question* instance)
 {
+    button_modern_destroy(&instance->check_next_btn);
+
     DestroyWindow(instance->hwnd);
 
     if (instance->dc_checkboxes) {
         SelectObject(instance->dc_checkboxes, instance->dc_checkboxes_orig);
         DeleteDC(instance->dc_checkboxes);
+        instance->dc_checkboxes = NULL;
+        instance->dc_checkboxes_orig = NULL;
     }
 
     if (instance->bmp_checkboxes) {
         DeleteObject(instance->bmp_checkboxes);
+        instance->bmp_checkboxes = NULL;
     }
 
     if (instance->question_fnt) {
         DeleteObject(instance->question_fnt);
+        instance->question_fnt = NULL;
     }
 
     if (instance->answer_fnt) {
         DeleteObject(instance->answer_fnt);
+        instance->answer_fnt = NULL;
     }
 
     if (instance->hint_fnt) {
         DeleteObject(instance->hint_fnt);
+        instance->hint_fnt = NULL;
     }
 
     if (instance->correct_bg_brush) {
         DeleteObject(instance->correct_bg_brush);
+        instance->correct_bg_brush = NULL;
     }
 
     if (instance->wrong_bg_brush) {
         DeleteObject(instance->wrong_bg_brush);
+        instance->wrong_bg_brush = NULL;
     }
 
     if (instance->partially_bg_brush) {
         DeleteObject(instance->partially_bg_brush);
+        instance->partially_bg_brush = NULL;
+    }
+
+    if (instance->progress_bar_brush) {
+        DeleteObject(instance->progress_bar_brush);
+        instance->progress_bar_brush = NULL;
     }
 }
 
@@ -189,6 +207,9 @@ static void screen_question_update_statusbar(screen_question* instance)
 {
     testownik_game_state game_state;
     testownik_get_game_state(&game_state);
+
+    instance->question_number = game_state.current_question;
+    instance->total_questions = game_state.questions_active_count;
 
     TCHAR buffer[256];
 
@@ -210,7 +231,7 @@ static void screen_question_update_statusbar(screen_question* instance)
         correct_perc = (100 * game_state.correct_count + total_answers / 2) / total_answers;
     }
 
-    wsprintf(buffer, L"Skuteczno\u015b\u0107: %d%%", correct_perc);
+    wsprintf(buffer, L" Skuteczno\u015b\u0107: %d%%", correct_perc);
     SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)buffer);
 
     performance_bar_set_value(instance->performance_bar, correct_perc);
@@ -220,7 +241,7 @@ static void screen_question_load_next_question(screen_question* instance)
 {
     bool has_question = testownik_move_to_next_question();
     if (!has_question) {
-        // TODO: no more questions!
+        PostMessage(GetParent(instance->hwnd), TM_END_GAME, 0, 0);
     }
 
     testownik_get_question_info(&instance->current_question);
@@ -595,6 +616,13 @@ static void screen_question_paint(screen_question* instance)
     default:
         break;
     }
+
+    // Draw progress bar
+    int width = (instance->question_number - 1) * client_rect.right / instance->total_questions;
+    SelectObject(hdc, GetStockObject(NULL_PEN));
+    SelectObject(hdc, instance->progress_bar_brush);
+
+    Rectangle(hdc, 0, 0, width, 5);
 
     int total_layout_height = current_y + scroll_y;
     int layout_end_y = current_y;

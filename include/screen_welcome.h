@@ -20,7 +20,7 @@ typedef struct {
     HFONT body_fnt;
 } screen_welcome;
 
-void screen_welcome_register();
+void screen_welcome_register(void);
 HWND screen_welcome_hwnd(screen_welcome* instance);
 void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_bar);
 void screen_welcome_destroy(screen_welcome* instance);
