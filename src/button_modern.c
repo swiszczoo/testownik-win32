@@ -24,7 +24,7 @@ void button_modern_create(HWND parent, button_modern* instance, LPCWSTR text,
     instance->bg_brush_pressed = NULL;
     instance->bg_brush_disabled = CreateSolidBrush(RGB(196, 196, 196));
     instance->bg_nopen = CreatePen(PS_SOLID, BORDER_SIZE, RGB(255, 255, 255));
-    instance->fg_font = create_font(L"Segoe UI", 36, true, false);
+    instance->fg_font = create_font(L"Segoe UI", dip(36), true, false);
     instance->hovered = false;
     instance->clicked = false;
 

@@ -7,7 +7,7 @@
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_PLK)
 LANGUAGE LANG_POLISH, SUBLANG_DEFAULT
-#pragma code_page(1250)
+#pragma code_page(65001)
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -51,6 +51,39 @@ IDI_TESTOWNIK_SM        ICON                    "testownik-sm.ico"
 
 IDB_CHECKBOXES          BITMAP                  "checkboxes.bmp"
 
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version info
+//
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     RC_VERSION
+PRODUCTVERSION  RC_VERSION
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName", "Łukasz Świszcz"
+            VALUE "FileDescription", "Testownik"
+            VALUE "FileVersion", VERSION_STRING
+            VALUE "InternalName", "TESTOWNIK.exe"
+            VALUE "LegalCopyright", "(C) 2024 Łukasz Świszcz, MIT license"
+            VALUE "OriginalFilename", "Testownik.exe"
+            VALUE "ProductName", "Testownik"
+            VALUE "ProductVersion", VERSION_STRING
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x415, 1250
+    END
+END
 
 
 #ifndef APSTUDIO_INVOKED

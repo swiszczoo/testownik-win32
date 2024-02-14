@@ -4,6 +4,7 @@ project(testownik_win32 VERSION 1.0.0)
 set(CMAKE_C_STANDARD 17)
 
 file(GLOB_RECURSE SOURCES "src/*.*")
+set(WIN_VERSION "${CMAKE_PROJECT_VERSION_MAJOR},${CMAKE_PROJECT_VERSION_MINOR},${CMAKE_PROJECT_VERSION_PATCH},0")
 
 add_executable(${PROJECT_NAME} WIN32
     ${SOURCES}
@@ -12,6 +13,8 @@ add_executable(${PROJECT_NAME} WIN32
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE -DUNICODE -D_UNICODE)
+target_compile_definitions(${PROJECT_NAME} PRIVATE -DRC_VERSION=${WIN_VERSION})
+target_compile_definitions(${PROJECT_NAME} PRIVATE -DVERSION_STRING="${CMAKE_PROJECT_VERSION}")
 
 # Link against built-in CRT (MSVCRT.dll) to remove all runtime dependencies
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -24,7 +27,6 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     comctl32
-    pathcch
     shlwapi
     ole32
     shell32

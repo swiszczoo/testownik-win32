@@ -10,8 +10,8 @@
 #include <windowsx.h>
 
 #define CLASS_NAME          L"WelcomeScreenClass"
-#define BASE_LAYOUT_WIDTH   650
-#define BASE_LAYOUT_HEIGHT  620
+#define BASE_LAYOUT_WIDTH   dip(650)
+#define BASE_LAYOUT_HEIGHT  dip(660)
 
 #define ABOUT_TEXT L"Ta implementacja Testownika zosta\u0142a napisana w j\u0119zyku C. " \
                     "Bezpo\u015brednio u\u017cywa interfejs\u00f3w systemu Windows, aby " \
@@ -52,37 +52,38 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
         0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
     SetWindowLongPtr(instance->hwnd, GWLP_USERDATA, (LONG_PTR)instance);
 
-    button_modern_create(instance->hwnd, &instance->library_btn, L"Wyb\u00f3r bazy...", 0, 0, 250, 80);
+    button_modern_create(instance->hwnd, &instance->library_btn, L"Wyb\u00f3r bazy...",
+        0, 0, dip(250), dip(80));
     button_modern_set_color(&instance->library_btn, RGB(32, 32, 32));
 
-    button_modern_create(instance->hwnd, &instance->start_btn, L"Rozpocznij", 0, 0, 250, 80);
+    button_modern_create(instance->hwnd, &instance->start_btn, L"Rozpocznij",
+        0, 0, dip(250), dip(80));
     button_modern_set_color(&instance->start_btn, RGB(33, 120, 60));
 
     EnableWindow(button_modern_hwnd(&instance->start_btn), FALSE);
 
     instance->check_rnd_questions = CreateWindow(L"BUTTON",
-        L"Losowa kolejno\u015b\u0107 pyta\u0144", BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
-        0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+        L"Losowa kolejno\u015b\u0107 pyta\u0144",
+        BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
+        0, 0, dip(630), dip(25), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     instance->check_rnd_answers = CreateWindow(L"BUTTON",
-        L"Losowa kolejno\u015b\u0107 odpowiedzi", BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
-        0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+        L"Losowa kolejno\u015b\u0107 odpowiedzi",
+        BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
+        0, 0, dip(630), dip(25), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     instance->check_always_multi = CreateWindow(L"BUTTON",
-        L"Zawsze pokazuj pytania wielokrotnego wyboru", BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
-        0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+        L"Zawsze pokazuj pytania wielokrotnego wyboru",
+        BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
+        0, 0, dip(630), dip(25), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     instance->check_autoselect = CreateWindow(L"BUTTON",
         L"Automatycznie zatwierdzaj odpowied\u017a przy pytaniach jednokrotnego wyboru",
         BS_AUTOCHECKBOX | WS_TABSTOP | WS_CHILD | WS_VISIBLE,
-        0, 0, 630, 25, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
-    SendMessage(instance->check_rnd_questions, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-    SendMessage(instance->check_rnd_answers, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-    SendMessage(instance->check_always_multi, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
-    SendMessage(instance->check_autoselect, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+        0, 0, dip(630), dip(25), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
 
     SendMessage(instance->check_rnd_questions, BM_SETCHECK, BST_CHECKED, (LPARAM)NULL);
     SendMessage(instance->check_rnd_answers, BM_SETCHECK, BST_CHECKED, (LPARAM)NULL);
 
     instance->title_fnt = CreateFont(
-        70,
+        dip(70),
         0,
         0,
         0,
@@ -93,12 +94,17 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
         ANSI_CHARSET,
         OUT_DEFAULT_PRECIS,
         CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY,
+        CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE,
         L"Segoe UI Light"
     );
-    instance->header_fnt = create_font(L"Segoe UI", 28, false, false);
-    instance->body_fnt = create_font(L"Segoe UI", 20, false, false);
+    instance->header_fnt = create_font(L"Segoe UI", dip(28), false, false);
+    instance->body_fnt = create_font(L"Segoe UI", dip(20), false, false);
+
+    SendMessage(instance->check_rnd_questions, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
+    SendMessage(instance->check_rnd_answers, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
+    SendMessage(instance->check_always_multi, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
+    SendMessage(instance->check_autoselect, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
 }
 
 void screen_welcome_destroy(screen_welcome* instance)
@@ -129,7 +135,7 @@ static int WINAPI screen_welcome_browse_for_db_proc(
         testownik_get_db_path(start_path, MAX_PATH + 16);
 
         while (!PathIsDirectory(start_path)) {
-            PathCchRemoveFileSpec(start_path, MAX_PATH + 16);
+            PathRemoveFileSpec(start_path);
         }
 
         SendMessage(hwnd, BFFM_SETSELECTION, 1, (LPARAM)start_path);
@@ -207,12 +213,14 @@ static void screen_welcome_resize(screen_welcome* instance, int width, int heigh
     int offset_x = (width - BASE_LAYOUT_WIDTH) / 2;
     int offset_y = (height - BASE_LAYOUT_HEIGHT) / 2;
 
-    set_window_pos(button_modern_hwnd(&instance->library_btn), 50 + offset_x, 490 + offset_y);
-    set_window_pos(button_modern_hwnd(&instance->start_btn), 325 + offset_x, 490 + offset_y);
-    set_window_pos(instance->check_rnd_questions, 10 + offset_x, 235 + offset_y);
-    set_window_pos(instance->check_rnd_answers, 10 + offset_x, 260 + offset_y);
-    set_window_pos(instance->check_always_multi, 10 + offset_x, 285 + offset_y);
-    set_window_pos(instance->check_autoselect, 10 + offset_x, 310 + offset_y);
+    set_window_pos(button_modern_hwnd(&instance->library_btn),
+        dip(65) + offset_x, dip(540) + offset_y);
+    set_window_pos(button_modern_hwnd(&instance->start_btn),
+        dip(335) + offset_x, dip(540) + offset_y);
+    set_window_pos(instance->check_rnd_questions, dip(10) + offset_x, dip(235) + offset_y);
+    set_window_pos(instance->check_rnd_answers, dip(10) + offset_x, dip(260) + offset_y);
+    set_window_pos(instance->check_always_multi, dip(10) + offset_x, dip(285) + offset_y);
+    set_window_pos(instance->check_autoselect, dip(10) + offset_x, dip(310) + offset_y);
 }
 
 static void screen_welcome_paint(screen_welcome* instance)
@@ -232,33 +240,43 @@ static void screen_welcome_paint(screen_welcome* instance)
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(96, 96, 96));
 
-    RECT header_rect = { offset_x, offset_y + 30, 650 + offset_x, offset_y + 100 };
-    DrawText(hdc, L"Testownik (win32)", -1, &header_rect, DT_CENTER | DT_SINGLELINE);
+    RECT header_rect = { offset_x, offset_y + 30,
+        BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(100) };
+    DrawText(hdc, L"Testownik dla Win32 v" VERSION_STRING, -1, &header_rect, DT_CENTER | DT_SINGLELINE);
 
     SelectObject(hdc, instance->header_fnt);
     SetTextColor(hdc, RGB(0, 51, 153));
-    RECT db_header_rect = { offset_x, offset_y + 120, 650 + offset_x, offset_y + 150 };
+    RECT db_header_rect = { offset_x, offset_y + dip(120),
+        BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(150) };
     DrawText(hdc, L"Baza pyta\u0144", -1, &db_header_rect, DT_SINGLELINE);
 
-    RECT conf_header_rect = { offset_x, offset_y + 200, 650 + offset_x, offset_y + 230 };
+    RECT conf_header_rect = { offset_x, offset_y + dip(200),
+        BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(230) };
     DrawText(hdc, L"Konfiguracja programu", -1, &conf_header_rect, DT_SINGLELINE);
 
-    RECT about_header_rect = { offset_x, offset_y + 340, 650 + offset_x, offset_y + 370 };
+    RECT about_header_rect = { offset_x, offset_y + dip(340),
+        BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(370) };
     DrawText(hdc, L"O Testowniku", -1, &about_header_rect, DT_SINGLELINE);
 
     SelectObject(hdc, instance->body_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
 
-    RECT db_body_rect = { offset_x + 10, offset_y + 155, 650 + offset_x, offset_y + 175 };
+    RECT db_body_rect = { offset_x + dip(10), offset_y + dip(155),
+        dip(BASE_LAYOUT_WIDTH - 10) + offset_x, offset_y + dip(175) };
     TCHAR path[MAX_PATH + 16];
     testownik_get_db_path(path, MAX_PATH + 16);
     DrawText(hdc, path, -1, &db_body_rect, DT_SINGLELINE | DT_PATH_ELLIPSIS);
 
-    RECT db_count_rect = { offset_x + 10, offset_y + 175, 650 + offset_x, offset_y + 195 };
-    wsprintf(buffer, L"Liczba pyta\u0144: %d", (int)testownik_get_question_count());
+    RECT db_count_rect = { offset_x + dip(10), offset_y + dip(175),
+        dip(BASE_LAYOUT_WIDTH - 10) + offset_x, offset_y + dip(195) };
+    wsprintf(buffer,
+        L"Znaleziono %d %s w bazie",
+        (int)testownik_get_question_count(),
+        plural(testownik_get_question_count(), L"pytanie", L"pytania", L"pyta\u0144"));
     DrawText(hdc, buffer, -1, &db_count_rect, DT_SINGLELINE);
 
-    RECT about_body_rect = { offset_x + 10, offset_y + 375, 650 + offset_x, offset_y + 455 };
+    RECT about_body_rect = { offset_x + dip(10), offset_y + dip(375),
+        dip(BASE_LAYOUT_WIDTH - 10) + offset_x, offset_y + dip(500) };
     DrawText(hdc, ABOUT_TEXT, -1, &about_body_rect, DT_WORDBREAK);
 
     SelectObject(hdc, prev_font);

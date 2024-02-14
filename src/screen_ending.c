@@ -1,11 +1,14 @@
 #include <screen_ending.h>
+
+#include <messages.h>
+#include <testownik.h>
 #include <utils.h>
 
 #include <CommCtrl.h>
 
 #define CLASS_NAME          L"EndingScreenClass"
-#define BASE_LAYOUT_WIDTH   420
-#define BASE_LAYOUT_HEIGHT  680
+#define BASE_LAYOUT_WIDTH   dip(480)
+#define BASE_LAYOUT_HEIGHT  dip(650)
 
 #define VALUE_COLOR         RGB(29, 101, 157)
 
@@ -44,24 +47,24 @@ void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar)
 
     instance->restart_all_btn = CreateWindowEx(0, L"BUTTON", L"Od nowa",
         BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
-        0, 0, BASE_LAYOUT_WIDTH, 100, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+        0, 0, BASE_LAYOUT_WIDTH, dip(80), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(instance->restart_all_btn, BCM_SETNOTE, 0,
         (LPARAM)L"Rozpocznij now\u0105 gr\u0119 z tymi samymi pytaniami");
 
     instance->restart_wrong_btn = CreateWindowEx(0, L"BUTTON",
         L"Tylko b\u0142\u0119dne odpowiedzi", BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
-        0, 0, BASE_LAYOUT_WIDTH, 100, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+        0, 0, BASE_LAYOUT_WIDTH, dip(100), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(instance->restart_wrong_btn, BCM_SETNOTE, 0,
         (LPARAM)L"Odpowiedz ponownie tylko na te pytania, na kt\u00f3re "
         "udzielona zosta\u0142a b\u0142\u0119dna odpowied\u017a");
 
     instance->exit_btn = CreateWindowEx(0, L"BUTTON", L"Koniec",
         BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
-        0, 0, BASE_LAYOUT_WIDTH, 100, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+        0, 0, BASE_LAYOUT_WIDTH, dip(80), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(instance->exit_btn, BCM_SETNOTE, 0, (LPARAM)L"Wyjd\u017a z Testownika");
 
     instance->title_fnt = CreateFont(
-        70,
+        dip(70),
         0,
         0,
         0,
@@ -72,12 +75,12 @@ void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar)
         ANSI_CHARSET,
         OUT_DEFAULT_PRECIS,
         CLIP_DEFAULT_PRECIS,
-        DEFAULT_QUALITY,
+        CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE,
         L"Segoe UI Light"
     );
-    instance->body_fnt = create_font(L"Segoe UI", 20, false, false);
-    instance->value_font = create_font(L"Segoe UI", 45, true, false);
+    instance->body_fnt = create_font(L"Segoe UI", dip(20), false, false);
+    instance->value_font = create_font(L"Segoe UI", dip(45), true, false);
 }
 
 void screen_ending_destroy(screen_ending* instance)
@@ -100,18 +103,43 @@ void screen_ending_destroy(screen_ending* instance)
     }
 }
 
+static void screen_ending_gather_stats(screen_ending* instance)
+{
+    testownik_game_state state;
+    testownik_get_game_state(&state);
+
+    instance->stat_total_seconds = testownik_get_game_seconds_elapsed(true);
+    instance->stat_total_answers = state.correct_count + state.wrong_count;
+    instance->stat_correct_answers = state.correct_count;
+    instance->stat_correct_percent = percent_of(state.correct_count, instance->stat_total_answers);
+
+    EnableWindow(instance->restart_wrong_btn, state.wrong_count > 0);
+}
+
 void screen_ending_run(screen_ending* instance)
 {
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L"\tKoniec gry!");
+    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L" Koniec gry!");
     SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)L"");
     SendMessage(instance->status_bar, SB_SETTEXT, 2, (LPARAM)L"");
     SendMessage(instance->status_bar, SB_SETTEXT, 3, (LPARAM)L"");
     SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)L"");
+
+    screen_ending_gather_stats(instance);
 }
 
 static void screen_ending_command(screen_ending* instance, HWND sender)
 {
-
+    if (sender == instance->restart_all_btn) {
+        testownik_restart_all_questions();
+        PostMessage(GetParent(instance->hwnd), TM_START_GAME, 0, 0);
+    }
+    else if (sender == instance->restart_wrong_btn) {
+        testownik_restart_wrong_answers();
+        PostMessage(GetParent(instance->hwnd), TM_START_GAME, 0, 0);
+    }
+    else if (sender == instance->exit_btn) {
+        PostMessage(GetParent(instance->hwnd), WM_CLOSE, 0, 0);
+    }
 }
 
 static void screen_ending_resize(screen_ending* instance, int width, int height)
@@ -119,9 +147,9 @@ static void screen_ending_resize(screen_ending* instance, int width, int height)
     int offset_x = (width - BASE_LAYOUT_WIDTH) / 2;
     int offset_y = (height - BASE_LAYOUT_HEIGHT) / 2;
 
-    set_window_pos(instance->restart_all_btn, offset_x, offset_y + 330);
-    set_window_pos(instance->restart_wrong_btn, offset_x, offset_y + 430);
-    set_window_pos(instance->exit_btn, offset_x, offset_y + 530);
+    set_window_pos(instance->restart_all_btn, offset_x, offset_y + dip(330));
+    set_window_pos(instance->restart_wrong_btn, offset_x, offset_y + dip(410));
+    set_window_pos(instance->exit_btn, offset_x, offset_y + dip(510));
 }
 
 static void screen_ending_format_time(LPWSTR out, int total_seconds)
@@ -172,39 +200,36 @@ static void screen_ending_paint(screen_ending* instance)
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(96, 96, 96));
 
-    RECT header_rect = { offset_x, offset_y + 30, BASE_LAYOUT_WIDTH + offset_x, offset_y + 100 };
+    RECT header_rect = { offset_x, offset_y + dip(30),
+        BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(100) };
     DrawText(hdc, L"Koniec gry!", -1, &header_rect, DT_CENTER | DT_SINGLELINE);
 
     SIZE part1_size, part2_size, part3_size;
     RECT rect1, rect2, rect3;
     int text_offset_x;
 
-    static const LPCWSTR LEARNING_TIME_STR =
+    static LPCWSTR LEARNING_TIME_STR =
         L"Czas, kt\u00f3ry up\u0142yn\u0105\u0142 na nauk\u0119 to  ";
 
-    static const LPCWSTR QUESTION_NUMBER_STR =
+    static LPCWSTR QUESTION_NUMBER_STR =
         L"Udzielono odpowiedzi na  ";
 
-    static const LPCWSTR QUESTION_NUMBER2_STR =
-        L"  pyta\u0144";
-
-    static const LPCWSTR CORRECT_ANSWERS_STR =
+    static LPCWSTR CORRECT_ANSWERS_STR =
         L"Poprawno\u015b\u0107 udzielanych odpowiedzi to  ";
 
     // Draw first line
     SelectObject(hdc, instance->body_fnt);
     GetTextExtentPoint32(hdc, LEARNING_TIME_STR, wcslen(LEARNING_TIME_STR), &part1_size);
     SelectObject(hdc, instance->value_font);
-    int seconds = 121;
-    screen_ending_format_time(buffer, seconds);
+    screen_ending_format_time(buffer, instance->stat_total_seconds);
     GetTextExtentPoint32(hdc, buffer, wcslen(buffer), &part2_size);
     text_offset_x = (BASE_LAYOUT_WIDTH - part1_size.cx - part2_size.cx) / 2;
     SelectObject(hdc, instance->body_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
     rect1.left = offset_x + text_offset_x;
-    rect1.top = offset_y + 120;
+    rect1.top = offset_y + dip(120);
     rect1.right = rect1.left + part1_size.cx;
-    rect1.bottom = offset_y + 170;
+    rect1.bottom = offset_y + dip(170);
     DrawText(hdc, LEARNING_TIME_STR, wcslen(LEARNING_TIME_STR), &rect1,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
@@ -212,26 +237,27 @@ static void screen_ending_paint(screen_ending* instance)
     rect2.left = rect1.right;
     rect2.top = rect1.top;
     rect2.right = rect2.left + part2_size.cx;
-    rect2.bottom = rect1.bottom - 15;
+    rect2.bottom = rect1.bottom - dip(15);
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
-        DT_SINGLELINE | DT_VCENTER) | DT_NOCLIP;
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
 
     // Draw second line
     SelectObject(hdc, instance->body_fnt);
     GetTextExtentPoint32(hdc, QUESTION_NUMBER_STR, wcslen(QUESTION_NUMBER_STR), &part1_size);
     SelectObject(hdc, instance->value_font);
-    int total_questions = 50;
-    wsprintf(buffer, L"%d", total_questions);
+    wsprintf(buffer, L"%d", instance->stat_total_answers);
     GetTextExtentPoint32(hdc, buffer, wcslen(buffer), &part2_size);
     SelectObject(hdc, instance->body_fnt);
+    LPCTSTR QUESTION_NUMBER2_STR =
+        plural(instance->stat_total_answers, L"  pytanie", L"  pytania", L"  pyta\u0144");
     GetTextExtentPoint32(hdc, QUESTION_NUMBER2_STR, wcslen(QUESTION_NUMBER2_STR), &part3_size);
     text_offset_x = (BASE_LAYOUT_WIDTH - part1_size.cx - part2_size.cx - part3_size.cx) / 2;
     SelectObject(hdc, instance->body_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
     rect1.left = offset_x + text_offset_x;
-    rect1.top = offset_y + 170;
+    rect1.top = offset_y + dip(170);
     rect1.right = rect1.left + part1_size.cx;
-    rect1.bottom = offset_y + 220;
+    rect1.bottom = offset_y + dip(220);
     DrawText(hdc, QUESTION_NUMBER_STR, wcslen(QUESTION_NUMBER_STR), &rect1,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
@@ -239,7 +265,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect2.left = rect1.right;
     rect2.top = rect1.top;
     rect2.right = rect2.left + part2_size.cx;
-    rect2.bottom = rect1.bottom - 15;
+    rect2.bottom = rect1.bottom - dip(15);
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->body_fnt);
@@ -255,32 +281,31 @@ static void screen_ending_paint(screen_ending* instance)
     SelectObject(hdc, instance->body_fnt);
     GetTextExtentPoint32(hdc, CORRECT_ANSWERS_STR, wcslen(CORRECT_ANSWERS_STR), &part1_size);
     SelectObject(hdc, instance->value_font);
-    int correct_percent = 100;
-    wsprintf(buffer, L"%d%%", correct_percent);
+    wsprintf(buffer, L"%d%%", instance->stat_correct_percent);
     GetTextExtentPoint32(hdc, buffer, wcslen(buffer), &part2_size);
     text_offset_x = (BASE_LAYOUT_WIDTH - part1_size.cx - part2_size.cx) / 2;
     SelectObject(hdc, instance->body_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
     rect1.left = offset_x + text_offset_x;
-    rect1.top = offset_y + 220;
+    rect1.top = offset_y + dip(220);
     rect1.right = rect1.left + part1_size.cx;
-    rect1.bottom = offset_y + 270;
+    rect1.bottom = offset_y + dip(270);
     DrawText(hdc, CORRECT_ANSWERS_STR, wcslen(CORRECT_ANSWERS_STR), &rect1,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
-    SetTextColor(hdc, screen_ending_get_color(correct_percent));
+    SetTextColor(hdc, screen_ending_get_color(instance->stat_correct_percent));
     rect2.left = rect1.right;
     rect2.top = rect1.top;
     rect2.right = rect2.left + part2_size.cx;
-    rect2.bottom = rect1.bottom - 15;
+    rect2.bottom = rect1.bottom - dip(15);
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
 
     // Draw command link header
     SelectObject(hdc, instance->body_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
-    RECT command_link_rect = { offset_x, offset_y + 300,
-        offset_x + BASE_LAYOUT_WIDTH, offset_y + 320 };
+    RECT command_link_rect = { offset_x, offset_y + dip(300),
+        offset_x + BASE_LAYOUT_WIDTH, offset_y + dip(320) };
     DrawText(hdc, L"Co teraz?", -1, &command_link_rect,
         DT_SINGLELINE | DT_CENTER | DT_NOCLIP);
     

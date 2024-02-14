@@ -101,7 +101,7 @@ static void performance_bar_paint(performance_bar* instance)
 LRESULT CALLBACK performance_bar_wndproc(
     HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    performance_bar* instance = GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    performance_bar* instance = (performance_bar*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
     switch (msg) {
 

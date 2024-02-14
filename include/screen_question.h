@@ -34,6 +34,7 @@ typedef struct {
     HBRUSH partially_bg_brush;
     HBRUSH progress_bar_brush;
 
+    int timer_seconds;
     int scroll_position;
     int total_layout_height;
     int layout_end_y;

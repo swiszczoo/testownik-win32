@@ -4,7 +4,6 @@
 #include <random.h>
 #include <vec.h>
 
-#include <PathCch.h>
 #include <Shlwapi.h>
 
 #include <memory.h>
@@ -53,8 +52,8 @@ void testownik_init(void)
     ZeroMemory(&APP, sizeof(APP));
 
     GetModuleFileName(GetModuleHandle(NULL), APP.db_path, MAX_PATH + 16);
-    PathCchRemoveFileSpec(APP.db_path, MAX_PATH + 16);
-    PathCchCombine(APP.db_path, MAX_PATH + 16, APP.db_path, L"qdb");
+    PathRemoveFileSpec(APP.db_path);
+    PathCombine(APP.db_path, APP.db_path, L"qdb");
 
     vec_init(&APP.questions, sizeof(testownik_question));
 }
@@ -394,7 +393,6 @@ static void testownik_prepare_initial_state(void)
         APP.question_order[i] = i;
         APP.questions_correct[i] = false;
         APP.questions_active[i] = true;
-        APP.questions_active[i] = i == 302;
     }
 
     APP.game.current_question = 0;
@@ -414,9 +412,9 @@ bool testownik_try_load_database(void)
 
     WIN32_FIND_DATA ffd;
     HANDLE search_handle;
-    TCHAR filter[MAX_PATH + 16];
+    TCHAR filter[MAX_PATH + 32];
 
-    PathCchCombine(filter, MAX_PATH + 16, APP.db_path, L"*.txt");
+    PathCombine(filter, APP.db_path, L"*.txt");
 
     search_handle = FindFirstFile(filter, &ffd);
     if (search_handle == INVALID_HANDLE_VALUE) {
@@ -432,11 +430,11 @@ bool testownik_try_load_database(void)
             continue;
         }
 
-        TCHAR question_path[MAX_PATH + 16];
+        TCHAR question_path[1024];
         testownik_question q;
         ZeroMemory(&q, sizeof(testownik_question));
 
-        PathCchCombine(question_path, MAX_PATH + 16, APP.db_path, ffd.cFileName);
+        PathCombine(question_path, APP.db_path, ffd.cFileName);
 
         if (testownik_load_question(question_path, &q)) {
             vec_append(&APP.questions, &q);
@@ -482,7 +480,9 @@ void testownik_start_game(testownik_config* game_config)
         return;
     }
 
-    memcpy(&APP.config, game_config, sizeof(testownik_config));
+    if (&APP.config != game_config) {
+        memcpy(&APP.config, game_config, sizeof(testownik_config));
+    }
 
     int total_questions_count = vec_get_size(&APP.questions);
     int active_questions = 0;
@@ -524,11 +524,11 @@ static void testownik_update_current_question_state()
     APP.current_question.question_type = MULTI_CHOICE;
 
     APP.current_question.question_image_path[0] = L'\0';
-    if (question->image_path) {
+    if (question->image_path && wcslen(question->image_path) < MAX_PATH) {
         wcscpy(APP.current_question.question_image_path, APP.db_path);
-        PathCchCombine(APP.current_question.question_image_path, MAX_PATH + 16,
+        PathCombine(APP.current_question.question_image_path,
             APP.current_question.question_image_path, L"img");
-        PathCchCombine(APP.current_question.question_image_path, MAX_PATH + 16,
+        PathCombine(APP.current_question.question_image_path,
             APP.current_question.question_image_path, question->image_path);
 
         if (!PathFileExists(APP.current_question.question_image_path)) {
@@ -598,9 +598,9 @@ bool testownik_get_question_info(testownik_question_info* info)
     return false;
 }
 
-int testownik_get_game_seconds_elapsed(void)
+int testownik_get_game_seconds_elapsed(bool after_game)
 {
-    if (!APP.is_game_in_progress) {
+    if (!after_game && !APP.is_game_in_progress) {
         return 0;
     }
 
@@ -661,5 +661,28 @@ bool testownik_check_answer(bool checked[TESTOWNIK_MAX_ANSWERS_PER_QUESTION])
     }
 
     return true;
+}
+
+void testownik_restart_all_questions(void)
+{
+    if (APP.is_game_in_progress) {
+        return;
+    }
+
+    testownik_start_game(&APP.config);
+}
+
+void testownik_restart_wrong_answers(void)
+{
+    if (APP.is_game_in_progress) {
+        return;
+    }
+
+    int question_count = vec_get_size(&APP.questions);
+    for (int i = 0; i < question_count; ++i) {
+        APP.questions_active[i] &= !APP.questions_correct[i];
+    }
+
+    testownik_start_game(&APP.config);
 }
 

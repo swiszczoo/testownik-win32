@@ -46,7 +46,7 @@ typedef enum {
 typedef struct {
     int question_number;
     LPCTSTR question_text;
-    WCHAR question_image_path[MAX_PATH + 16];
+    WCHAR question_image_path[1024];
     testownik_question_type question_type;
     int answer_count;
     int answer_id[TESTOWNIK_MAX_ANSWERS_PER_QUESTION];
@@ -68,5 +68,7 @@ void testownik_get_game_state(testownik_game_state* out);
 bool testownik_is_game_in_progress(void);
 bool testownik_move_to_next_question(void);
 bool testownik_get_question_info(testownik_question_info* info);
-int testownik_get_game_seconds_elapsed(void);
+int testownik_get_game_seconds_elapsed(bool after_game);
 bool testownik_check_answer(bool checked[TESTOWNIK_MAX_ANSWERS_PER_QUESTION]);
+void testownik_restart_all_questions(void);
+void testownik_restart_wrong_answers(void);

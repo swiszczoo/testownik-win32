@@ -28,6 +28,7 @@ static screen_welcome welcome_screen;
 static screen_question question_screen;
 static screen_ending ending_screen;
 
+static int dpi;
 static HWND status_bar;
 static performance_bar perf_bar;
 
@@ -84,11 +85,11 @@ static void resize_all_screens(int new_width, int new_height)
     RECT status_rect;
     GetClientRect(status_bar, &status_rect);
 
-    int y = (status_rect.bottom - status_rect.top - 20) / 2 + 1;
-    int text_width = 130 * GetDpiForWindow(status_bar) / USER_DEFAULT_SCREEN_DPI;
+    int y = (status_rect.bottom - status_rect.top - dip(20)) / 2 + 1;
+    int text_width = dip(150);
 
     SetWindowPos(performance_bar_hwnd(&perf_bar), NULL,
-        new_width - 300 + text_width, y, 300 - text_width - 30, 20, SWP_NOOWNERZORDER);
+        new_width - dip(300) + text_width, y, dip(300) - text_width - dip(30), dip(20), SWP_NOOWNERZORDER);
 }
 
 static HWND current_screen_hwnd(void)
@@ -100,6 +101,14 @@ static HWND current_screen_hwnd(void)
     }
 
     return NULL;
+}
+
+
+int dip(int input)
+{
+    static const int DEFAULT_DPI = 120;
+
+    return (input * dpi + dpi / 2) / DEFAULT_DPI;
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance,
@@ -148,17 +157,27 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     RegisterClassEx(&wcex);
 
+    dpi = USER_DEFAULT_SCREEN_DPI;
+
     hwnd = CreateWindow(wcex.lpszClassName,     // window class name
-        L"Testownik",                           // window caption
+        L"Testownik v" VERSION_STRING,          // window caption
         WS_OVERLAPPEDWINDOW,                    // window style
         300,                                    // initial x position
         200,                                    // initial y position
-        1000,                                   // initial x size
-        800,                                    // initial y size
+        dip(1000),                              // initial x size
+        dip(800),                               // initial y size
         NULL,                                   // parent window handle
         NULL,                                   // window menu handle
         hInstance,                              // program instance handle
         NULL);                                  // creation parameters
+
+    HMODULE user32dll = GetModuleHandle(L"user32.dll");
+    if (user32dll) {
+        UINT(*dpi_fn)(HWND) = (void*)GetProcAddress(user32dll, "GetDpiForWindow");
+        if (dpi_fn) {
+            dpi = dpi_fn(hwnd);
+        }
+    }
 
     status_bar = CreateWindow(STATUSCLASSNAME, NULL,
         SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, hInstance, NULL);
@@ -213,13 +232,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     case WM_GETMINMAXINFO:
     {
         LPMINMAXINFO minMax = (LPMINMAXINFO)lParam;
-        minMax->ptMinTrackSize.x = 1200;
-        minMax->ptMinTrackSize.y = 850;
+        minMax->ptMinTrackSize.x = dip(1200);
+        minMax->ptMinTrackSize.y = dip(850);
         return 0;
     }
 
     case WM_CLOSE:
-        DestroyWindow(hwnd);
+        if (MessageBox(hwnd, L"Czy na pewno?", L"Wyjd\u017a z Testownika",
+            MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2) == IDYES) {
+
+            DestroyWindow(hwnd);
+        }
         return 0;
 
     case WM_SIZE:
@@ -227,7 +250,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
 
-        int statusBarParts[] = {width - 900, width - 700, width - 500, width - 300, -1 };
+        int statusBarParts[] = {
+            width - dip(900),
+            width - dip(700),
+            width - dip(500),
+            width - dip(300),
+            -1
+        };
         SendMessage(status_bar, SB_SETPARTS, 5, (LPARAM)statusBarParts);
         SendMessage(status_bar, WM_SIZE, 0, 0);
 

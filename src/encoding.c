@@ -81,7 +81,7 @@ size_t encoding_get_convert_out_size(const char* input)
     UINT input_codepage = is_valid_utf8 ? CP_UTF8 : 1250;
     int offset = has_bom ? 3 : 0;
 
-    return MultiByteToWideChar(input_codepage, MB_PRECOMPOSED, input + offset, -1, NULL, 0) * sizeof(WCHAR);
+    return MultiByteToWideChar(input_codepage, 0, input + offset, -1, NULL, 0) * sizeof(WCHAR);
 }
 
 bool encoding_convert_to_wide(wchar_t* output, size_t output_size, const char* input)
@@ -97,7 +97,7 @@ bool encoding_convert_to_wide(wchar_t* output, size_t output_size, const char* i
     int offset = has_bom ? 3 : 0;
 
     size_t result = MultiByteToWideChar(
-        input_codepage, MB_PRECOMPOSED, input + offset, -1, output, output_size / sizeof(WCHAR));
+        input_codepage, 0, input + offset, -1, output, output_size / sizeof(WCHAR));
 
     return result > 0;
 }

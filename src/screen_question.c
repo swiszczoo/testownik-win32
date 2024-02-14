@@ -12,8 +12,8 @@
 #include <windowsx.h>
 
 #define CLASS_NAME              L"QuestionScreenClass"
-#define MAX_LAYOUT_WIDTH        1600
-#define MARGIN                  50
+#define MAX_LAYOUT_WIDTH        dip(1600)
+#define MARGIN                  dip(50)
 #define CHECKED_STATE           3
 #define RADIOBUTTON_STATE       9
 #define CHECKBOX_SIZE           32
@@ -81,7 +81,7 @@ static const LPCWSTR STR_WRONG_MSGS[MESSAGES_PER_CATEGORY] = {
     L"Jest inaczej...",
     L"B\u0142\u0105d!",
     L"Nieprawda.",
-    L"Spr\u00f3buj p\u00f3\u017aniej!",
+    L"Spr\u00f3buj jeszcze raz!",
     L"To nie tak!",
     L"Niepoprawna odpowied\u017a!",
 };
@@ -120,13 +120,13 @@ void screen_question_create(HWND parent, screen_question* instance,
     SetWindowLongPtr(instance->hwnd, GWLP_USERDATA, (LONG_PTR)instance);
 
     button_modern_create(instance->hwnd, &instance->check_next_btn,
-        STR_CHECK_ANSWER, 0, 0, 250, 80);
+        STR_CHECK_ANSWER, 0, 0, dip(250), dip(80));
     button_modern_set_color(&instance->check_next_btn, NORMAL_COLOR);
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), FALSE);
 
     instance->scroll_bar = CreateWindowEx(0, L"SCROLLBAR", NULL,
-        WS_CHILD | WS_VISIBLE | SBS_VERT, 0, 0, 22, 500, instance->hwnd,
-        NULL, GetModuleHandle(NULL), NULL);
+        WS_CHILD | WS_VISIBLE | SBS_VERT, 0, 0, dip(22), dip(500),
+        instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
 
     instance->bmp_checkboxes = LoadBitmap(
         GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_CHECKBOXES));
@@ -135,9 +135,9 @@ void screen_question_create(HWND parent, screen_question* instance,
 
     instance->question_bmp = NULL;
 
-    instance->question_fnt = create_font(L"Segoe UI", 40, false, false);
-    instance->answer_fnt = create_font(L"Segoe UI Semibold", 30, false, false);
-    instance->hint_fnt = create_font(L"Segoe UI", 20, false, false);
+    instance->question_fnt = create_font(L"Segoe UI", dip(40), false, false);
+    instance->answer_fnt = create_font(L"Segoe UI Semibold", dip(30), false, false);
+    instance->hint_fnt = create_font(L"Segoe UI", dip(20), false, false);
     instance->timer_ptr = 0;
 
     instance->correct_bg_brush = CreateSolidBrush(CORRECT_BG);
@@ -227,8 +227,7 @@ static void screen_question_update_statusbar(screen_question* instance)
     int correct_perc = 50;
 
     if (total_answers) {
-        // https://stackoverflow.com/questions/20788793/c-how-to-calculate-a-percentageperthousands-without-floating-point-precision
-        correct_perc = (100 * game_state.correct_count + total_answers / 2) / total_answers;
+        correct_perc = percent_of(game_state.correct_count, total_answers);
     }
 
     wsprintf(buffer, L" Skuteczno\u015b\u0107: %d%%", correct_perc);
@@ -242,6 +241,7 @@ static void screen_question_load_next_question(screen_question* instance)
     bool has_question = testownik_move_to_next_question();
     if (!has_question) {
         PostMessage(GetParent(instance->hwnd), TM_END_GAME, 0, 0);
+        return;
     }
 
     testownik_get_question_info(&instance->current_question);
@@ -289,6 +289,7 @@ void screen_question_run(screen_question* instance)
     SetFocus(instance->hwnd);
     screen_question_load_next_question(instance);
 
+    instance->timer_seconds = -1;
     instance->timer_ptr = SetTimer(instance->hwnd, 0, 200, NULL);
 }
 
@@ -302,7 +303,7 @@ static void screen_question_set_scroll_info(screen_question* instance)
     si.cbSize = sizeof(SCROLLINFO);
     si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
     si.nMin = 0;
-    si.nMax = instance->total_layout_height + 130;
+    si.nMax = instance->total_layout_height + dip(130);
     si.nPage = client_rect.bottom - client_rect.top;
     si.nPos = instance->scroll_position;
 
@@ -380,15 +381,15 @@ static void screen_question_resize(screen_question* instance, int width, int hei
         offset_x = (client_rect.right - client_rect.left - MAX_LAYOUT_WIDTH) / 2;
     }
 
-    int y = client_rect.bottom - client_rect.top - 130;
+    int y = client_rect.bottom - client_rect.top - dip(130);
     int y2 = instance->layout_end_y;
 
     int button_y = max(y, y2);
 
     SetWindowPos(button_modern_hwnd(&instance->check_next_btn), NULL,
-        offset_x + 100, button_y, viewport_width - 200, 80, SWP_NOOWNERZORDER);
+        offset_x + dip(100), button_y, viewport_width - dip(200), dip(80), SWP_NOOWNERZORDER);
 
-    int scrollbar_width = 22;
+    int scrollbar_width = dip(22);
     SetWindowPos(instance->scroll_bar, NULL,
         client_rect.right - client_rect.left - scrollbar_width, 0,
         scrollbar_width, client_rect.bottom - client_rect.top, SWP_NOOWNERZORDER);
@@ -439,13 +440,13 @@ static int screen_question_draw_answer(screen_question* instance, HDC hdc,
     LPCWSTR text, int offset_x, int offset_y, int viewport_width,
     int checkbox_state, LPRECT out_rect)
 {
-    RECT answer_rect = { offset_x + 64, offset_y,
+    RECT answer_rect = { offset_x + dip(32) + 32, offset_y,
         offset_x + viewport_width, offset_y };
     DrawText(hdc, text, -1, &answer_rect, DT_CALCRECT | DT_WORDBREAK);
     DrawText(hdc, text, -1, &answer_rect, DT_NOCLIP | DT_WORDBREAK);
 
     int checkbox_y = offset_y + (answer_rect.bottom - answer_rect.top - CHECKBOX_SIZE) / 2;
-    checkbox_y += 2;
+    checkbox_y += dip(2);
 
     // Draw checkbox
     if (!instance->dc_checkboxes) {
@@ -457,7 +458,7 @@ static int screen_question_draw_answer(screen_question* instance, HDC hdc,
     int bmp_row = checkbox_state / 3;
     int bmp_col = checkbox_state % 3;
 
-    answer_rect.left = offset_x + 16;
+    answer_rect.left = offset_x + dip(16);
     InflateRect(&answer_rect, 10, 10);
     *out_rect = answer_rect;
 
@@ -516,12 +517,12 @@ static void screen_question_paint(screen_question* instance)
     int current_y = question_text_rect.bottom;
     if (instance->question_bmp) {
         current_y = screen_question_draw_image(instance, hdc,
-            offset_x, current_y + 20, viewport_width);
+            offset_x, current_y + dip(20), viewport_width);
     }
 
     // Draw answers
-    int help_text_y = current_y + 40;
-    current_y += 75;
+    int help_text_y = current_y + dip(40);
+    current_y += dip(75);
 
     bool is_pressed = instance->answer_pressed >= 0;
     SelectObject(hdc, instance->answer_fnt);
@@ -560,7 +561,7 @@ static void screen_question_paint(screen_question* instance)
             viewport_width, state, &instance->answer_rect[i]);
     }
 
-    current_y += 15;
+    current_y += dip(15);
 
     // Draw answer message rect
     HBRUSH brush = instance->correct_bg_brush;
@@ -589,22 +590,31 @@ static void screen_question_paint(screen_question* instance)
             instance->correct_answer_message,
             wcslen(instance->correct_answer_message), &text_size);
 
-        text_size.cx += 150;
+        text_size.cx += dip(150);
         int pos_x = (client_rect.right - client_rect.left - text_size.cx) / 2;
 
-        RECT text_rect = { pos_x, current_y, pos_x + text_size.cx, current_y + 80 };
-        Rectangle(hdc, pos_x, current_y, pos_x + text_size.cx, current_y + 80);
+        int total_height = current_y + dip(250) + scroll_y;
+        int additional_offset = 0;
+
+        if (total_height < client_rect.bottom - client_rect.top) {
+            additional_offset = (client_rect.bottom - client_rect.top - total_height) / 2;
+        }
+
+        RECT text_rect = { pos_x, current_y + additional_offset,
+            pos_x + text_size.cx, current_y + dip(80) + additional_offset };
+        Rectangle(hdc, pos_x, current_y + additional_offset,
+            pos_x + text_size.cx, current_y + dip(80) + additional_offset );
         DrawText(hdc, instance->correct_answer_message, -1, &text_rect,
             DT_SINGLELINE | DT_CENTER | DT_VCENTER);
     }
 
-    current_y += 100;
+    current_y += dip(120);
 
     // Draw help text
     SelectObject(hdc, instance->hint_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
-    RECT hint_rect = { offset_x + 64, help_text_y,
-        offset_x + viewport_width, help_text_y + 35 };
+    RECT hint_rect = { offset_x + dip(64), help_text_y,
+        offset_x + viewport_width, help_text_y + dip(35) };
     switch (instance->current_question.question_type) {
     case MULTI_CHOICE:
         DrawText(hdc, L"Zaznacz wszystkie poprawne odpowiedzi:", -1,
@@ -870,10 +880,20 @@ LRESULT CALLBACK screen_question_wndproc(
 
         int size = ToUnicode(wParam, scan_code, kbd_state, buffer, 16, 0);
         if (size == 1) {
-            for (int i = 0; i < TESTOWNIK_MAX_ANSWERS_PER_QUESTION; ++i) {
-                if (instance->current_question.answer_symbol[i] == buffer[0]) {
-                    screen_question_handle_toggle(instance, i);
-                    return 0;
+            if (buffer[0] >= '0' && buffer[0] <= '9') {
+                int selection = buffer[0] - '1';
+                if (buffer[0] == '0') selection = 10;
+
+                if (selection < instance->current_question.answer_count) {
+                    screen_question_handle_toggle(instance, selection);
+                }
+            }
+            else {
+                for (int i = 0; i < TESTOWNIK_MAX_ANSWERS_PER_QUESTION; ++i) {
+                    if (instance->current_question.answer_symbol[i] == buffer[0]) {
+                        screen_question_handle_toggle(instance, i);
+                        return 0;
+                    }
                 }
             }
 
@@ -893,13 +913,18 @@ LRESULT CALLBACK screen_question_wndproc(
         }
 
         TCHAR buffer[256];
-        int total_seconds = testownik_get_game_seconds_elapsed();
-        int hours = total_seconds / 3600;
-        int minutes = total_seconds / 60 - hours * 60;
-        int seconds = total_seconds - minutes * 60;
+        int total_seconds = testownik_get_game_seconds_elapsed(false);
 
-        wsprintf(buffer, L"\tCzas nauki: %02d:%02d:%02d", hours, minutes, seconds);
-        SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
+        if (instance && total_seconds != instance->timer_seconds) {
+            int hours = total_seconds / 3600;
+            int minutes = total_seconds / 60 - hours * 60;
+            int seconds = total_seconds - minutes * 60;
+
+            wsprintf(buffer, L"\tCzas nauki: %02d:%02d:%02d", hours, minutes, seconds);
+            SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
+
+            instance->timer_seconds = total_seconds;
+        }
         return 0;
     }
 

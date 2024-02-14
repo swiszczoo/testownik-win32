@@ -12,6 +12,11 @@ typedef struct {
     HFONT title_fnt;
     HFONT body_fnt;
     HFONT value_font;
+
+    int stat_total_seconds;
+    int stat_correct_answers;
+    int stat_total_answers;
+    int stat_correct_percent;
 } screen_ending;
 
 void screen_ending_register(void);
