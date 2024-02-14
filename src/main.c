@@ -85,7 +85,7 @@ static void resize_all_screens(int new_width, int new_height)
     GetClientRect(status_bar, &status_rect);
 
     int y = (status_rect.bottom - status_rect.top - 20) / 2 + 1;
-    int text_width = 110 * GetDpiForWindow(status_bar) / USER_DEFAULT_SCREEN_DPI;
+    int text_width = 130 * GetDpiForWindow(status_bar) / USER_DEFAULT_SCREEN_DPI;
 
     SetWindowPos(performance_bar_hwnd(&perf_bar), NULL,
         new_width - 300 + text_width, y, 300 - text_width - 30, 20, SWP_NOOWNERZORDER);

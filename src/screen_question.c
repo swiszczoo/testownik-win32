@@ -249,7 +249,8 @@ static void screen_question_load_next_question(screen_question* instance)
     if (instance->question_dc) {
         SelectObject(instance->question_dc, instance->question_dc_orig);
         DeleteDC(instance->question_dc);
-        instance->question_dc = instance->question_dc_orig = NULL;
+        instance->question_dc = NULL;
+        instance->question_dc_orig = NULL;
     }
 
     if (instance->question_bmp) {

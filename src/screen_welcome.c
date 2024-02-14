@@ -153,7 +153,7 @@ static bool screen_welcome_browse_for_db(screen_welcome* instance)
         bi.hwndOwner = instance->hwnd;
         bi.pidlRoot = NULL;
         bi.pszDisplayName = selected_path;
-        bi.lpszTitle = L"Wybierz folder z baz\u0105 pyta\u0144";
+        bi.lpszTitle = L"Wybierz folder z baz\u0105 pyta\u0144:";
         bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NONEWFOLDERBUTTON;
         bi.lpfn = screen_welcome_browse_for_db_proc;
         LPITEMIDLIST result = SHBrowseForFolder(&bi);

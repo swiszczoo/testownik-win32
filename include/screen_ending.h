@@ -5,6 +5,10 @@ typedef struct {
     HWND hwnd;
     HWND status_bar;
 
+    HWND restart_all_btn;
+    HWND restart_wrong_btn;
+    HWND exit_btn;
+
     HFONT title_fnt;
     HFONT body_fnt;
     HFONT value_font;

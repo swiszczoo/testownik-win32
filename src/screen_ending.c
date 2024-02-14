@@ -4,8 +4,8 @@
 #include <CommCtrl.h>
 
 #define CLASS_NAME          L"EndingScreenClass"
-#define BASE_LAYOUT_WIDTH   650
-#define BASE_LAYOUT_HEIGHT  620
+#define BASE_LAYOUT_WIDTH   420
+#define BASE_LAYOUT_HEIGHT  680
 
 #define VALUE_COLOR         RGB(29, 101, 157)
 
@@ -41,6 +41,24 @@ void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar)
         WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE,
         0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
     SetWindowLongPtr(instance->hwnd, GWLP_USERDATA, (LONG_PTR)instance);
+
+    instance->restart_all_btn = CreateWindowEx(0, L"BUTTON", L"Od nowa",
+        BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
+        0, 0, BASE_LAYOUT_WIDTH, 100, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+    SendMessage(instance->restart_all_btn, BCM_SETNOTE, 0,
+        (LPARAM)L"Rozpocznij now\u0105 gr\u0119 z tymi samymi pytaniami");
+
+    instance->restart_wrong_btn = CreateWindowEx(0, L"BUTTON",
+        L"Tylko b\u0142\u0119dne odpowiedzi", BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
+        0, 0, BASE_LAYOUT_WIDTH, 100, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+    SendMessage(instance->restart_wrong_btn, BCM_SETNOTE, 0,
+        (LPARAM)L"Odpowiedz ponownie tylko na te pytania, na kt\u00f3re "
+        "udzielona zosta\u0142a b\u0142\u0119dna odpowied\u017a");
+
+    instance->exit_btn = CreateWindowEx(0, L"BUTTON", L"Koniec",
+        BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
+        0, 0, BASE_LAYOUT_WIDTH, 100, instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
+    SendMessage(instance->exit_btn, BCM_SETNOTE, 0, (LPARAM)L"Wyjd\u017a z Testownika");
 
     instance->title_fnt = CreateFont(
         70,
@@ -101,7 +119,9 @@ static void screen_ending_resize(screen_ending* instance, int width, int height)
     int offset_x = (width - BASE_LAYOUT_WIDTH) / 2;
     int offset_y = (height - BASE_LAYOUT_HEIGHT) / 2;
 
-
+    set_window_pos(instance->restart_all_btn, offset_x, offset_y + 330);
+    set_window_pos(instance->restart_wrong_btn, offset_x, offset_y + 430);
+    set_window_pos(instance->exit_btn, offset_x, offset_y + 530);
 }
 
 static void screen_ending_format_time(LPWSTR out, int total_seconds)
@@ -186,7 +206,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect1.right = rect1.left + part1_size.cx;
     rect1.bottom = offset_y + 170;
     DrawText(hdc, LEARNING_TIME_STR, wcslen(LEARNING_TIME_STR), &rect1,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
     SetTextColor(hdc, VALUE_COLOR);
     rect2.left = rect1.right;
@@ -194,7 +214,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect2.right = rect2.left + part2_size.cx;
     rect2.bottom = rect1.bottom - 15;
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER) | DT_NOCLIP;
 
     // Draw second line
     SelectObject(hdc, instance->body_fnt);
@@ -213,7 +233,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect1.right = rect1.left + part1_size.cx;
     rect1.bottom = offset_y + 220;
     DrawText(hdc, QUESTION_NUMBER_STR, wcslen(QUESTION_NUMBER_STR), &rect1,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
     SetTextColor(hdc, VALUE_COLOR);
     rect2.left = rect1.right;
@@ -221,7 +241,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect2.right = rect2.left + part2_size.cx;
     rect2.bottom = rect1.bottom - 15;
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->body_fnt);
     SetTextColor(hdc, RGB(0, 0, 0));
     rect3.left = rect2.right;
@@ -229,7 +249,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect3.right = rect3.left + part3_size.cx;
     rect3.bottom = rect1.bottom;
     DrawText(hdc, QUESTION_NUMBER2_STR, wcslen(QUESTION_NUMBER2_STR), &rect3,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
 
     // Draw third line
     SelectObject(hdc, instance->body_fnt);
@@ -246,7 +266,7 @@ static void screen_ending_paint(screen_ending* instance)
     rect1.right = rect1.left + part1_size.cx;
     rect1.bottom = offset_y + 270;
     DrawText(hdc, CORRECT_ANSWERS_STR, wcslen(CORRECT_ANSWERS_STR), &rect1,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
     SetTextColor(hdc, screen_ending_get_color(correct_percent));
     rect2.left = rect1.right;
@@ -254,8 +274,15 @@ static void screen_ending_paint(screen_ending* instance)
     rect2.right = rect2.left + part2_size.cx;
     rect2.bottom = rect1.bottom - 15;
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
-        DT_SINGLELINE | DT_VCENTER);
+        DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
 
+    // Draw command link header
+    SelectObject(hdc, instance->body_fnt);
+    SetTextColor(hdc, RGB(0, 0, 0));
+    RECT command_link_rect = { offset_x, offset_y + 300,
+        offset_x + BASE_LAYOUT_WIDTH, offset_y + 320 };
+    DrawText(hdc, L"Co teraz?", -1, &command_link_rect,
+        DT_SINGLELINE | DT_CENTER | DT_NOCLIP);
     
     SelectObject(hdc, prev_font);
     EndPaint(instance->hwnd, &ps);
