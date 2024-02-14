@@ -19,7 +19,6 @@ jobs:
         run: |
           cmake --preset release-x64
           cmake --preset release-x64-crt140
-          cmake --preset release-x86-crt140
 
       - name: Build release-x64
         run: cmake --build build/release
@@ -27,15 +26,11 @@ jobs:
       - name: Build release-x64-crt140
         run: cmake --build build/release-crt140
 
-      - name: Build release-x86-crt140
-        run: cmake --build build/release-x86-crt140
-
       - name: Package artifacts
         run: |
           mkdir dist
-          copy build/release/Testownik.exe dist/testownik_x64_msvcrt.exe
-          copy build/release-crt140/Testownik.exe dist/testownik_x64_static.exe
-          copy build/release-x86-crt140/Testownik.exe dist/testownik_x86_static.exe
+          copy build/release/Testownik.exe dist/Testownik.exe
+          copy build/release-crt140/Testownik.exe dist/Testownik_static.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

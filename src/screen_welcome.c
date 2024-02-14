@@ -14,10 +14,10 @@
 #define BASE_LAYOUT_HEIGHT  dip(660)
 
 #define ABOUT_TEXT L"Ta implementacja Testownika zosta\u0142a napisana w j\u0119zyku C. " \
-                    "Bezpo\u015brednio u\u017cywa interfejs\u00f3w systemu Windows, aby " \
-                    "maksymalnie zmniejszy\u0107 rozmiar pliku binarnego.\r\n" \
-                    "Licencja: MIT\r\n" \
-                    "Repo: https://github.com/swiszczoo/testownik-win32"
+                   L"Bezpo\u015brednio u\u017cywa interfejs\u00f3w systemu Windows, aby " \
+                   L"maksymalnie zmniejszy\u0107 rozmiar pliku binarnego.\r\n" \
+                   L"Licencja: MIT\r\n" \
+                   L"Repo: https://github.com/swiszczoo/testownik-win32"
 
 static ATOM class_atom;
 
@@ -169,7 +169,7 @@ static bool screen_welcome_browse_for_db(screen_welcome* instance)
             testownik_set_db_path(selected_path);
             if (!testownik_try_load_database()) {
                 MessageBox(instance->hwnd, L"Nie uda\u0142o si\u0119 wczyta\u0107 "
-                    "bazy pyta\u0144 z wybranego folderu. Spr\u00f3buj ponownie.", NULL, MB_ICONWARNING);
+                    L"bazy pyta\u0144 z wybranego folderu. Spr\u00f3buj ponownie.", NULL, MB_ICONWARNING);
 
                 continue;
             }

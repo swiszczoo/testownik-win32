@@ -56,7 +56,7 @@ void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar)
         0, 0, BASE_LAYOUT_WIDTH, dip(100), instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(instance->restart_wrong_btn, BCM_SETNOTE, 0,
         (LPARAM)L"Odpowiedz ponownie tylko na te pytania, na kt\u00f3re "
-        "udzielona zosta\u0142a b\u0142\u0119dna odpowied\u017a");
+        L"udzielona zosta\u0142a b\u0142\u0119dna odpowied\u017a");
 
     instance->exit_btn = CreateWindowEx(0, L"BUTTON", L"Koniec",
         BS_COMMANDLINK | WS_CHILD | WS_VISIBLE,
