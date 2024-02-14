@@ -1,0 +1,44 @@
+name: build-testownik
+on: [push]
+
+jobs:
+  build_and_pack:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Configure Visual Studio Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: CMake configure all builds
+        run: |
+          cmake --preset release-x64
+          cmake --preset release-x64-crt140
+          cmake --preset release-x86-crt140
+
+      - name: Build release-x64
+        run: cmake --build build/release
+
+      - name: Build release-x64-crt140
+        run: cmake --build build/release-crt140
+
+      - name: Build release-x86-crt140
+        run: cmake --build build/release-x86-crt140
+
+      - name: Package artifacts
+        run: |
+          mkdir dist
+          copy build/release/Testownik.exe dist/testownik_x64_msvcrt.exe
+          copy build/release-crt140/Testownik.exe dist/testownik_x64_static.exe
+          copy build/release-x86-crt140/Testownik.exe dist/testownik_x86_static.exe
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe_files
+          path: dist/**
