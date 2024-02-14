@@ -21,9 +21,58 @@
                 "value": "x64",
                 "strategy": "external"
             },
-            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "release-x64-crt140",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release-crt140",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel",
+                "TESTOWNIK_FORCE_CRT140": true
+            }
+        },
+        {
+            "name": "debug-x86",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/debug-x86",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release-x86",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release-x86",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "release-x86-crt140",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release-x86-crt140",
+            "architecture": {
+                "value": "x86",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel",
+                "TESTOWNIK_FORCE_CRT140": true
             }
         }
     ]

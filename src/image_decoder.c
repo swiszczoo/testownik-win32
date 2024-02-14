@@ -36,7 +36,7 @@ HBITMAP image_decoder_file_to_hbitmap(LPCWSTR path)
     }
 
     IWICBitmapDecoder* decoder = NULL;
-    IWICBitmapFrameDecode* frame = NULL;
+    IWICBitmapSource* frame = NULL;
     BYTE* pixels = NULL;
     HRESULT hr;
 
@@ -46,7 +46,7 @@ HBITMAP image_decoder_file_to_hbitmap(LPCWSTR path)
         goto error;
     }
 
-    hr = decoder->lpVtbl->GetFrame(decoder, 0, &frame);
+    hr = decoder->lpVtbl->GetFrame(decoder, 0, (IWICBitmapFrameDecode**)&frame);
     if (FAILED(hr)) {
         goto error;
     }

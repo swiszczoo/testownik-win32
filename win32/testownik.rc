@@ -66,12 +66,13 @@ FILESUBTYPE     VFT2_UNKNOWN
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904E4"
+        BLOCK "041504E2"
         BEGIN
+            VALUE "Comments", "Implementacja aplikacji Testownik dla podsystemu Win32"
             VALUE "CompanyName", "Łukasz Świszcz"
             VALUE "FileDescription", "Testownik"
             VALUE "FileVersion", VERSION_STRING
-            VALUE "InternalName", "TESTOWNIK.exe"
+            VALUE "InternalName", "Testownik"
             VALUE "LegalCopyright", "(C) 2024 Łukasz Świszcz, MIT license"
             VALUE "OriginalFilename", "Testownik.exe"
             VALUE "ProductName", "Testownik"
