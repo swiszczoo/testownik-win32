@@ -136,8 +136,6 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     image_decoder_init();
 
-    HBITMAP test = image_decoder_file_to_hbitmap(L"C:\\Users\\lukas\\Desktop\\problem.png");
-
     HWND hwnd;
     MSG msg;
     WNDCLASSEX wcex;
