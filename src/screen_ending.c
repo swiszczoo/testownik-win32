@@ -156,7 +156,7 @@ static void screen_ending_format_time(LPWSTR out, int total_seconds)
 {
     int hours = total_seconds / 3600;
     int minutes = total_seconds / 60 - hours * 60;
-    int seconds = total_seconds - minutes * 60;
+    int seconds = total_seconds - minutes * 60 - hours * 3600;
     if (hours > 0) {
         wsprintf(out, L"%d godz %d min %d s", hours, minutes, seconds);
     }
