@@ -918,7 +918,7 @@ LRESULT CALLBACK screen_question_wndproc(
         if (instance && total_seconds != instance->timer_seconds) {
             int hours = total_seconds / 3600;
             int minutes = total_seconds / 60 - hours * 60;
-            int seconds = total_seconds - minutes * 60;
+            int seconds = total_seconds - minutes * 60 - hours * 3600;
 
             wsprintf(buffer, L"\tCzas nauki: %02d:%02d:%02d", hours, minutes, seconds);
             SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
