@@ -4,6 +4,7 @@
 #include <messages.h>
 #include <random.h>
 #include <resource.h>
+#include <theme.h>
 #include <utils.h>
 
 #include <assert.h>
@@ -17,16 +18,6 @@
 #define CHECKED_STATE           3
 #define RADIOBUTTON_STATE       9
 #define CHECKBOX_SIZE           32
-
-#define NORMAL_COLOR            RGB(39, 121, 177)
-
-#define CORRECT_COLOR           RGB(34, 175, 67)
-#define WRONG_COLOR             RGB(176, 40, 38)
-#define PARTIALLY_COLOR         RGB(175, 95, 34)
-
-#define CORRECT_BG              RGB(228, 250, 233)
-#define WRONG_BG                RGB(249, 228, 227)
-#define PARTIALLY_BG            RGB(250, 236, 226)
 
 
 typedef enum {
@@ -97,7 +88,7 @@ void screen_question_register() {
     wcex.cbWndExtra = 0;
     wcex.hInstance = GetModuleHandle(NULL);
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.hbrBackground = NULL;
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = CLASS_NAME;
 
@@ -110,10 +101,9 @@ HWND screen_question_hwnd(screen_question* instance)
 }
 
 void screen_question_create(HWND parent, screen_question* instance,
-    HWND status_bar, performance_bar* perf_bar)
+    status_bar* status_bar)
 {
     instance->status_bar = status_bar;
-    instance->performance_bar = perf_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
         WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE,
         0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
@@ -121,15 +111,17 @@ void screen_question_create(HWND parent, screen_question* instance,
 
     button_modern_create(instance->hwnd, &instance->check_next_btn,
         STR_CHECK_ANSWER, 0, 0, dip(250), dip(80));
-    button_modern_set_color(&instance->check_next_btn, NORMAL_COLOR);
+    button_modern_set_color(&instance->check_next_btn, theme_get_color(COL_BUTTON_PRIMARY));
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), FALSE);
 
     instance->scroll_bar = CreateWindowEx(0, L"SCROLLBAR", NULL,
         WS_CHILD | WS_VISIBLE | SBS_VERT, 0, 0, dip(22), dip(500),
         instance->hwnd, NULL, GetModuleHandle(NULL), NULL);
-
-    instance->bmp_checkboxes = LoadBitmap(
-        GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_CHECKBOXES));
+    theme_setup_scroll_bar(instance->scroll_bar);
+        
+    instance->bmp_checkboxes = (HBITMAP)LoadImage(
+        GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_CHECKBOXES),
+        IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
     instance->dc_checkboxes = NULL;
     instance->dc_checkboxes_orig = NULL;
 
@@ -138,15 +130,19 @@ void screen_question_create(HWND parent, screen_question* instance,
     instance->question_fnt = create_font(L"Segoe UI", dip(40), false, false);
     instance->answer_fnt = create_font(L"Segoe UI Semibold", dip(30), false, false);
     instance->hint_fnt = create_font(L"Segoe UI", dip(20), false, false);
+    instance->bg_brush = CreateSolidBrush(theme_get_color(COL_BACKGROUND));
     instance->timer_ptr = 0;
 
-    instance->correct_bg_brush = CreateSolidBrush(CORRECT_BG);
-    instance->wrong_bg_brush = CreateSolidBrush(WRONG_BG);
-    instance->partially_bg_brush = CreateSolidBrush(PARTIALLY_BG);
-    instance->progress_bar_brush = CreateSolidBrush(NORMAL_COLOR);
+    instance->correct_bg_brush = CreateSolidBrush(theme_get_color(COL_BACKGROUND_CORRECT));
+    instance->wrong_bg_brush = CreateSolidBrush(theme_get_color(COL_BACKGROUND_WRONG));
+    instance->partially_bg_brush = CreateSolidBrush(theme_get_color(COL_BACKGROUND_PARTIALLY));
+    instance->progress_bar_brush = CreateSolidBrush(theme_get_color(COL_BUTTON_PRIMARY));
 
     instance->answer_hovered = -1;
     instance->answer_pressed = -1;
+
+    ZeroMemory(&instance->status_data, sizeof(instance->status_data));
+    instance->status_data.question_mode = true;
 }
 
 void screen_question_destroy(screen_question* instance)
@@ -201,6 +197,11 @@ void screen_question_destroy(screen_question* instance)
         DeleteObject(instance->progress_bar_brush);
         instance->progress_bar_brush = NULL;
     }
+
+    if (instance->bg_brush) {
+        DeleteObject(instance->bg_brush);
+        instance->bg_brush = NULL;
+    }
 }
 
 static void screen_question_update_statusbar(screen_question* instance)
@@ -211,17 +212,10 @@ static void screen_question_update_statusbar(screen_question* instance)
     instance->question_number = game_state.current_question;
     instance->total_questions = game_state.questions_active_count;
 
-    TCHAR buffer[256];
-
-    wsprintf(buffer, L"\tPytanie: %03d / %03d",
+    wsprintf(instance->status_data.question_text, L"Pytanie: %03d / %03d",
         game_state.current_question, game_state.questions_active_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)buffer);
-
-    wsprintf(buffer, L"\tPoprawne: %d", game_state.correct_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 2, (LPARAM)buffer);
-
-    wsprintf(buffer, L"\tNiepoprawne: %d", game_state.wrong_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 3, (LPARAM)buffer);
+    wsprintf(instance->status_data.correct_text, L"Poprawne: %d", game_state.correct_count);
+    wsprintf(instance->status_data.wrong_text, L"Niepoprawne: %d", game_state.wrong_count);
 
     int total_answers = game_state.correct_count + game_state.wrong_count;
     int correct_perc = 50;
@@ -230,10 +224,10 @@ static void screen_question_update_statusbar(screen_question* instance)
         correct_perc = percent_of(game_state.correct_count, total_answers);
     }
 
-    wsprintf(buffer, L" Skuteczno\u015b\u0107: %d%%", correct_perc);
-    SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)buffer);
+    wsprintf(instance->status_data.performance_text, L" Skuteczno\u015b\u0107: %d%%", correct_perc);
+    instance->status_data.percent_correct = correct_perc;
 
-    performance_bar_set_value(instance->performance_bar, correct_perc);
+    status_bar_update(instance->status_bar, &instance->status_data);
 }
 
 static void screen_question_load_next_question(screen_question* instance)
@@ -279,7 +273,7 @@ static void screen_question_load_next_question(screen_question* instance)
     SetWindowText(button_modern_hwnd(&instance->check_next_btn), STR_CHECK_ANSWER);
     EnableWindow(button_modern_hwnd(&instance->check_next_btn), false);
     SetFocus(instance->hwnd);
-    button_modern_set_color(&instance->check_next_btn, NORMAL_COLOR);
+    button_modern_set_color(&instance->check_next_btn, theme_get_color(COL_BUTTON_PRIMARY));
     screen_question_update_statusbar(instance);
     InvalidateRect(instance->hwnd, NULL, true);
 }
@@ -338,15 +332,15 @@ static void screen_question_check_answer_next_question(screen_question* instance
 
         switch (instance->current_question.result) {
         case CORRECT:
-            button_modern_set_color(&instance->check_next_btn, CORRECT_COLOR);
+            button_modern_set_color(&instance->check_next_btn, theme_get_color(COL_BUTTON_CORRECT));
             instance->correct_answer_message = STR_CORRECT_MSGS[message_id];
             break;
         case WRONG:
-            button_modern_set_color(&instance->check_next_btn, WRONG_COLOR);
+            button_modern_set_color(&instance->check_next_btn, theme_get_color(COL_BUTTON_WRONG));
             instance->correct_answer_message = STR_WRONG_MSGS[message_id];
             break;
         case PARTIALLY_CORRECT:
-            button_modern_set_color(&instance->check_next_btn, PARTIALLY_COLOR);
+            button_modern_set_color(&instance->check_next_btn, theme_get_color(COL_BUTTON_PARTIALLY));
             instance->correct_answer_message = STR_PARTIALLY_MSGS[message_id];
             break;
         }
@@ -453,6 +447,24 @@ static int screen_question_draw_answer(screen_question* instance, HDC hdc,
         instance->dc_checkboxes = CreateCompatibleDC(hdc);
         instance->dc_checkboxes_orig = SelectObject(
             instance->dc_checkboxes, instance->bmp_checkboxes);
+
+        if (theme_is_dark_theme()) {
+            RGBQUAD dark_colors[16];
+            GetDIBColorTable(instance->dc_checkboxes, 0, 16, dark_colors);
+
+            dark_colors[2].rgbRed = 120; dark_colors[2].rgbGreen = 120; dark_colors[2].rgbBlue = 120;
+            dark_colors[4].rgbRed = 96; dark_colors[4].rgbGreen = 96; dark_colors[4].rgbBlue = 96;
+            dark_colors[7].rgbRed = 64; dark_colors[7].rgbGreen = 64; dark_colors[7].rgbBlue = 64;
+            dark_colors[8].rgbRed = 66; dark_colors[8].rgbGreen = 83; dark_colors[8].rgbBlue = 94;
+            dark_colors[9].rgbRed = 100; dark_colors[9].rgbGreen = 62; dark_colors[9].rgbBlue = 54;
+            dark_colors[10].rgbRed = 60; dark_colors[10].rgbGreen = 84; dark_colors[10].rgbBlue = 106;
+            dark_colors[11].rgbRed = 52; dark_colors[11].rgbGreen = 101; dark_colors[11].rgbBlue = 63;
+            dark_colors[12].rgbRed = 43; dark_colors[12].rgbGreen = 55; dark_colors[12].rgbBlue = 63;
+            dark_colors[13].rgbRed = 40; dark_colors[13].rgbGreen = 40; dark_colors[13].rgbBlue = 40;
+            dark_colors[15].rgbRed = 32; dark_colors[15].rgbGreen = 32; dark_colors[15].rgbBlue = 32;
+
+            SetDIBColorTable(instance->dc_checkboxes, 0, 16, dark_colors);
+        }
     }
 
     int bmp_row = checkbox_state / 3;
@@ -496,7 +508,7 @@ static void screen_question_paint(screen_question* instance)
     // Paint code begins here
     HGDIOBJ prev_font = SelectObject(hdc, instance->question_fnt);
     SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(168, 168, 168));
+    SetTextColor(hdc, theme_get_color(COL_QUESTION_NUMBER));
 
     wsprintf(buffer, L"%d. ", instance->current_question.question_number);
     SIZE question_num_size;
@@ -505,7 +517,7 @@ static void screen_question_paint(screen_question* instance)
         offset_x + question_num_size.cx, offset_y + question_num_size.cy };
     DrawText(hdc, buffer, -1, &question_num_rect, DT_SINGLELINE | DT_NOCLIP);
 
-    SetTextColor(hdc, RGB(16, 16, 16));
+    SetTextColor(hdc, theme_get_color(COL_QUESTION_TEXT));
     RECT question_text_rect = { offset_x + question_num_size.cx, offset_y,
         offset_x + viewport_width, offset_y };
     DrawText(hdc, instance->current_question.question_text, -1,
@@ -565,16 +577,16 @@ static void screen_question_paint(screen_question* instance)
 
     // Draw answer message rect
     HBRUSH brush = instance->correct_bg_brush;
-    COLORREF text_color = CORRECT_COLOR;
+    COLORREF text_color = theme_get_color(COL_TEXT_CORRECT);
 
     switch (instance->current_question.result) {
     case WRONG:
         brush = instance->wrong_bg_brush;
-        text_color = WRONG_COLOR;
+        text_color = theme_get_color(COL_TEXT_WRONG);
         break;
     case PARTIALLY_CORRECT:
         brush = instance->partially_bg_brush;
-        text_color = PARTIALLY_COLOR;
+        text_color = theme_get_color(COL_TEXT_PARTIALLY);
         break;
     }
 
@@ -612,7 +624,7 @@ static void screen_question_paint(screen_question* instance)
 
     // Draw help text
     SelectObject(hdc, instance->hint_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
     RECT hint_rect = { offset_x + dip(64), help_text_y,
         offset_x + viewport_width, help_text_y + dip(35) };
     switch (instance->current_question.question_type) {
@@ -774,6 +786,15 @@ LRESULT CALLBACK screen_question_wndproc(
         }
     }
 
+    case WM_ERASEBKGND:
+    {
+        HDC dc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect(dc, &rc, instance->bg_brush);
+        return TRUE;
+    }
+
     case WM_MOUSEMOVE:
     {
         if (!instance) {
@@ -920,8 +941,9 @@ LRESULT CALLBACK screen_question_wndproc(
             int minutes = total_seconds / 60 - hours * 60;
             int seconds = total_seconds - minutes * 60 - hours * 3600;
 
-            wsprintf(buffer, L"\tCzas nauki: %02d:%02d:%02d", hours, minutes, seconds);
-            SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
+            wsprintf(instance->status_data.time_text,
+                L"Czas nauki: %02d:%02d:%02d", hours, minutes, seconds);
+            status_bar_update(instance->status_bar, &instance->status_data);
 
             instance->timer_seconds = total_seconds;
         }

@@ -2,6 +2,7 @@
 
 #include <messages.h>
 #include <testownik.h>
+#include <theme.h>
 #include <utils.h>
 
 #include <ShlObj.h>
@@ -32,7 +33,7 @@ void screen_welcome_register(void) {
     wcex.cbWndExtra = 0;
     wcex.hInstance = GetModuleHandle(NULL);
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.hbrBackground = NULL;
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = CLASS_NAME;
 
@@ -44,7 +45,7 @@ HWND screen_welcome_hwnd(screen_welcome* instance)
     return instance->hwnd;
 }
 
-void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_bar)
+void screen_welcome_create(HWND parent, screen_welcome* instance, status_bar* status_bar)
 {
     instance->status_bar = status_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
@@ -54,7 +55,7 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
 
     button_modern_create(instance->hwnd, &instance->library_btn, L"Wyb\u00f3r bazy...",
         0, 0, dip(250), dip(80));
-    button_modern_set_color(&instance->library_btn, RGB(32, 32, 32));
+    button_modern_set_color(&instance->library_btn, theme_get_color(COL_BUTTON_NORMAL));
 
     button_modern_create(instance->hwnd, &instance->start_btn, L"Rozpocznij",
         0, 0, dip(250), dip(80));
@@ -101,10 +102,19 @@ void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_ba
     instance->header_fnt = create_font(L"Segoe UI", dip(28), false, false);
     instance->body_fnt = create_font(L"Segoe UI", dip(20), false, false);
 
+    instance->bg_brush = CreateSolidBrush(theme_get_color(COL_BACKGROUND));
+
     SendMessage(instance->check_rnd_questions, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
     SendMessage(instance->check_rnd_answers, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
     SendMessage(instance->check_always_multi, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
     SendMessage(instance->check_autoselect, WM_SETFONT, (WPARAM)instance->body_fnt, TRUE);
+
+    if (theme_is_dark_theme()) {
+        theme_set_window_theme(instance->check_rnd_questions, L"", L"");
+        theme_set_window_theme(instance->check_rnd_answers, L"", L"");
+        theme_set_window_theme(instance->check_always_multi, L"", L"");
+        theme_set_window_theme(instance->check_autoselect, L"", L"");
+    }
 }
 
 void screen_welcome_destroy(screen_welcome* instance)
@@ -116,14 +126,22 @@ void screen_welcome_destroy(screen_welcome* instance)
 
     if (instance->title_fnt) {
         DeleteObject(instance->title_fnt);
+        instance->title_fnt = NULL;
     }
 
     if (instance->header_fnt) {
         DeleteObject(instance->header_fnt);
+        instance->header_fnt = NULL;
     }
 
     if (instance->body_fnt) {
         DeleteObject(instance->body_fnt);
+        instance->body_fnt = NULL;
+    }
+
+    if (instance->bg_brush) {
+        DeleteObject(instance->bg_brush);
+        instance->bg_brush = NULL;
     }
 }
 
@@ -238,14 +256,14 @@ static void screen_welcome_paint(screen_welcome* instance)
 
     HGDIOBJ prev_font = SelectObject(hdc, instance->title_fnt);
     SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(96, 96, 96));
+    SetTextColor(hdc, theme_get_color(COL_TITLE));
 
     RECT header_rect = { offset_x, offset_y + 30,
         BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(100) };
     DrawText(hdc, L"Testownik dla Win32 v" VERSION_STRING, -1, &header_rect, DT_CENTER | DT_SINGLELINE);
 
     SelectObject(hdc, instance->header_fnt);
-    SetTextColor(hdc, RGB(0, 51, 153));
+    SetTextColor(hdc, theme_get_color(COL_HEADER));
     RECT db_header_rect = { offset_x, offset_y + dip(120),
         BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(150) };
     DrawText(hdc, L"Baza pyta\u0144", -1, &db_header_rect, DT_SINGLELINE);
@@ -259,7 +277,7 @@ static void screen_welcome_paint(screen_welcome* instance)
     DrawText(hdc, L"O Testowniku", -1, &about_header_rect, DT_SINGLELINE);
 
     SelectObject(hdc, instance->body_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
 
     RECT db_body_rect = { offset_x + dip(10), offset_y + dip(155),
         dip(BASE_LAYOUT_WIDTH - 10) + offset_x, offset_y + dip(175) };
@@ -276,7 +294,7 @@ static void screen_welcome_paint(screen_welcome* instance)
     DrawText(hdc, buffer, -1, &db_count_rect, DT_SINGLELINE);
 
     RECT about_body_rect = { offset_x + dip(10), offset_y + dip(375),
-        dip(BASE_LAYOUT_WIDTH - 10) + offset_x, offset_y + dip(500) };
+        BASE_LAYOUT_WIDTH - dip(10) + offset_x, offset_y + dip(500) };
     DrawText(hdc, ABOUT_TEXT, -1, &about_body_rect, DT_WORDBREAK);
 
     SelectObject(hdc, prev_font);
@@ -285,7 +303,12 @@ static void screen_welcome_paint(screen_welcome* instance)
 
 void screen_welcome_run(screen_welcome* instance)
 {
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L" Testownik \u2014 konfiguracja");
+    status_bar_data data;
+    ZeroMemory(&data, sizeof(data));
+    data.question_mode = FALSE;
+    wcscpy(data.question_text, L"Testownik \u2014 konfiguracja");
+
+    status_bar_update(instance->status_bar, &data);
 
     bool ok = testownik_try_load_database();
     if (!ok) {
@@ -328,11 +351,20 @@ LRESULT CALLBACK screen_welcome_wndproc(
         }
         break;
     }
+    case WM_ERASEBKGND:
+    {
+        HDC dc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect(dc, &rc, instance->bg_brush);
+        return TRUE;
+    }
     case WM_CTLCOLORBTN:
     case WM_CTLCOLORSTATIC:
     {
         SetBkMode((HDC)wParam, TRANSPARENT);
-        return (LRESULT)GetStockObject(WHITE_BRUSH);
+        SetTextColor((HDC)wParam, theme_get_color(COL_FOREGROUND));
+        return (LRESULT)instance->bg_brush;
     }
     }
 
