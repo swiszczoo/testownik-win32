@@ -23,6 +23,9 @@ static const COLORREF COLOR_TABLE[2][COL_COUNT] = {
         RGB(34, 175, 67),                   // COL_BUTTON_CORRECT
         RGB(176, 40, 38),                   // COL_BUTTON_WRONG
         RGB(175, 95, 34),                   // COL_BUTTON_PARTIALLY
+        RGB(34, 175, 67),                   // COL_TEXT_CORRECT
+        RGB(176, 40, 38),                   // COL_TEXT_WRONG
+        RGB(175, 95, 34),                   // COL_TEXT_PARTIALLY
         RGB(228, 250, 233),                 // COL_BACKGROUND_CORRECT
         RGB(249, 228, 227),                 // COL_BACKGROUND_WRONG
         RGB(250, 236, 226),                 // COL_BACKGROUND_PARTIALLY
@@ -41,6 +44,9 @@ static const COLORREF COLOR_TABLE[2][COL_COUNT] = {
         RGB(34, 175, 67),                   // COL_BUTTON_CORRECT
         RGB(176, 40, 38),                   // COL_BUTTON_WRONG
         RGB(175, 95, 34),                   // COL_BUTTON_PARTIALLY
+        RGB(128, 255, 157),                 // COL_TEXT_CORRECT
+        RGB(255, 128, 128),                 // COL_TEXT_WRONG
+        RGB(255, 182, 127),                 // COL_TEXT_PARTIALLY
         RGB(32, 51, 34),                    // COL_BACKGROUND_CORRECT
         RGB(51, 32, 32),                    // COL_BACKGROUND_WRONG
         RGB(51, 37, 32),                    // COL_BACKGROUND_PARTIALLY

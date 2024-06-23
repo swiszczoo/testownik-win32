@@ -577,16 +577,16 @@ static void screen_question_paint(screen_question* instance)
 
     // Draw answer message rect
     HBRUSH brush = instance->correct_bg_brush;
-    COLORREF text_color = theme_get_color(COL_BUTTON_CORRECT);
+    COLORREF text_color = theme_get_color(COL_TEXT_CORRECT);
 
     switch (instance->current_question.result) {
     case WRONG:
         brush = instance->wrong_bg_brush;
-        text_color = theme_get_color(COL_BUTTON_WRONG);
+        text_color = theme_get_color(COL_TEXT_WRONG);
         break;
     case PARTIALLY_CORRECT:
         brush = instance->partially_bg_brush;
-        text_color = theme_get_color(COL_BUTTON_PARTIALLY);
+        text_color = theme_get_color(COL_TEXT_PARTIALLY);
         break;
     }
 

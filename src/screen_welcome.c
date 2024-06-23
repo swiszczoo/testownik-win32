@@ -294,7 +294,7 @@ static void screen_welcome_paint(screen_welcome* instance)
     DrawText(hdc, buffer, -1, &db_count_rect, DT_SINGLELINE);
 
     RECT about_body_rect = { offset_x + dip(10), offset_y + dip(375),
-        dip(BASE_LAYOUT_WIDTH - 10) + offset_x, offset_y + dip(500) };
+        BASE_LAYOUT_WIDTH - dip(10) + offset_x, offset_y + dip(500) };
     DrawText(hdc, ABOUT_TEXT, -1, &about_body_rect, DT_WORDBREAK);
 
     SelectObject(hdc, prev_font);
