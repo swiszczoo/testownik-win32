@@ -101,10 +101,9 @@ HWND screen_question_hwnd(screen_question* instance)
 }
 
 void screen_question_create(HWND parent, screen_question* instance,
-    HWND status_bar, performance_bar* perf_bar)
+    status_bar* status_bar)
 {
     instance->status_bar = status_bar;
-    instance->performance_bar = perf_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
         WS_CLIPCHILDREN | WS_CHILD | WS_VISIBLE,
         0, 0, 100, 100, parent, NULL, GetModuleHandle(NULL), NULL);
@@ -141,6 +140,9 @@ void screen_question_create(HWND parent, screen_question* instance,
 
     instance->answer_hovered = -1;
     instance->answer_pressed = -1;
+
+    ZeroMemory(&instance->status_data, sizeof(instance->status_data));
+    instance->status_data.question_mode = true;
 }
 
 void screen_question_destroy(screen_question* instance)
@@ -210,17 +212,10 @@ static void screen_question_update_statusbar(screen_question* instance)
     instance->question_number = game_state.current_question;
     instance->total_questions = game_state.questions_active_count;
 
-    TCHAR buffer[256];
-
-    wsprintf(buffer, L"\tPytanie: %03d / %03d",
+    wsprintf(instance->status_data.question_text, L"Pytanie: %03d / %03d",
         game_state.current_question, game_state.questions_active_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)buffer);
-
-    wsprintf(buffer, L"\tPoprawne: %d", game_state.correct_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 2, (LPARAM)buffer);
-
-    wsprintf(buffer, L"\tNiepoprawne: %d", game_state.wrong_count);
-    SendMessage(instance->status_bar, SB_SETTEXT, 3, (LPARAM)buffer);
+    wsprintf(instance->status_data.correct_text, L"Poprawne: %d", game_state.correct_count);
+    wsprintf(instance->status_data.wrong_text, L"Niepoprawne: %d", game_state.wrong_count);
 
     int total_answers = game_state.correct_count + game_state.wrong_count;
     int correct_perc = 50;
@@ -229,10 +224,10 @@ static void screen_question_update_statusbar(screen_question* instance)
         correct_perc = percent_of(game_state.correct_count, total_answers);
     }
 
-    wsprintf(buffer, L" Skuteczno\u015b\u0107: %d%%", correct_perc);
-    SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)buffer);
+    wsprintf(instance->status_data.performance_text, L" Skuteczno\u015b\u0107: %d%%", correct_perc);
+    instance->status_data.percent_correct = correct_perc;
 
-    performance_bar_set_value(instance->performance_bar, correct_perc);
+    status_bar_update(instance->status_bar, &instance->status_data);
 }
 
 static void screen_question_load_next_question(screen_question* instance)
@@ -455,7 +450,7 @@ static int screen_question_draw_answer(screen_question* instance, HDC hdc,
 
         if (theme_is_dark_theme()) {
             RGBQUAD dark_colors[16];
-            GetDIBColorTable(instance->dc_checkboxes, 0, 16, &dark_colors);
+            GetDIBColorTable(instance->dc_checkboxes, 0, 16, dark_colors);
 
             dark_colors[2].rgbRed = 120; dark_colors[2].rgbGreen = 120; dark_colors[2].rgbBlue = 120;
             dark_colors[4].rgbRed = 96; dark_colors[4].rgbGreen = 96; dark_colors[4].rgbBlue = 96;
@@ -468,7 +463,7 @@ static int screen_question_draw_answer(screen_question* instance, HDC hdc,
             dark_colors[13].rgbRed = 40; dark_colors[13].rgbGreen = 40; dark_colors[13].rgbBlue = 40;
             dark_colors[15].rgbRed = 32; dark_colors[15].rgbGreen = 32; dark_colors[15].rgbBlue = 32;
 
-            SetDIBColorTable(instance->dc_checkboxes, 0, 16, &dark_colors);
+            SetDIBColorTable(instance->dc_checkboxes, 0, 16, dark_colors);
         }
     }
 
@@ -946,8 +941,9 @@ LRESULT CALLBACK screen_question_wndproc(
             int minutes = total_seconds / 60 - hours * 60;
             int seconds = total_seconds - minutes * 60 - hours * 3600;
 
-            wsprintf(buffer, L"\tCzas nauki: %02d:%02d:%02d", hours, minutes, seconds);
-            SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)buffer);
+            wsprintf(instance->status_data.time_text,
+                L"Czas nauki: %02d:%02d:%02d", hours, minutes, seconds);
+            status_bar_update(instance->status_bar, &instance->status_data);
 
             instance->timer_seconds = total_seconds;
         }

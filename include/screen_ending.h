@@ -1,9 +1,11 @@
 #pragma once
 #include <Windows.h>
 
+#include <status_bar.h>
+
 typedef struct {
     HWND hwnd;
-    HWND status_bar;
+    status_bar* status_bar;
 
     HWND restart_all_btn;
     HWND restart_wrong_btn;
@@ -23,7 +25,7 @@ typedef struct {
 
 void screen_ending_register(void);
 HWND screen_ending_hwnd(screen_ending* instance);
-void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar);
+void screen_ending_create(HWND parent, screen_ending* instance, status_bar* status_bar);
 void screen_ending_destroy(screen_ending* instance);
 void screen_ending_run(screen_ending* instance);
 

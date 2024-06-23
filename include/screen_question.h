@@ -2,15 +2,14 @@
 #include <Windows.h>
 
 #include <button_modern.h>
-#include <performance_bar.h>
+#include <status_bar.h>
 #include <testownik.h>
 
 typedef struct {
     HWND hwnd;
-    HWND status_bar;
+    status_bar* status_bar;
 
     button_modern check_next_btn;
-    performance_bar* performance_bar;
     HWND scroll_bar;
 
     HBITMAP bmp_checkboxes;
@@ -47,12 +46,13 @@ typedef struct {
 
     bool correct_answer_shown;
     LPCWSTR correct_answer_message;
+
+    status_bar_data status_data;
 } screen_question;
 
 void screen_question_register();
 HWND screen_question_hwnd(screen_question* instance);
-void screen_question_create(HWND parent, screen_question* instance, HWND status_bar,
-    performance_bar* perf_bar);
+void screen_question_create(HWND parent, screen_question* instance, status_bar* status_bar);
 void screen_question_destroy(screen_question* instance);
 void screen_question_run(screen_question* instance);
 

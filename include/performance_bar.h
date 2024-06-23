@@ -4,6 +4,8 @@
 typedef struct {
     HWND hwnd;
     int value;
+
+    HBRUSH question_bg_brush;
 } performance_bar;
 
 void performance_bar_register(void);

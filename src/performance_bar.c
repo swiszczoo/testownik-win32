@@ -1,4 +1,5 @@
 #include <performance_bar.h>
+#include <theme.h>
 
 #define CLASS_NAME          L"PerformanceBarClass"
 
@@ -15,7 +16,7 @@ void performance_bar_register(void) {
     wcex.cbWndExtra = 0;
     wcex.hInstance = GetModuleHandle(NULL);
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+    wcex.hbrBackground = NULL;
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = CLASS_NAME;
 
@@ -34,17 +35,30 @@ void performance_bar_create(HWND parent, performance_bar* instance,
         WS_CHILD | WS_VISIBLE, x, y, width, height, parent, NULL,
         GetModuleHandle(NULL), NULL);
     SetWindowLongPtr(instance->hwnd, GWLP_USERDATA, (LONG_PTR)instance);
-    instance->value = 50;
+    performance_bar_set_value(instance, 50);
 }
 
 void performance_bar_destroy(performance_bar* instance)
 {
     DestroyWindow(instance->hwnd);
+
+    if (instance->question_bg_brush) {
+        DeleteObject(instance->question_bg_brush);
+        instance->question_bg_brush = NULL;
+    }
 }
 
 void performance_bar_set_value(performance_bar* instance, int value)
 {
     instance->value = value;
+
+    if (instance->question_bg_brush) {
+        DeleteObject(instance->question_bg_brush);
+        instance->question_bg_brush = NULL;
+    }
+
+    instance->question_bg_brush = CreateSolidBrush(theme_get_performance_bg_color(value));
+
     InvalidateRect(instance->hwnd, NULL, TRUE);
 }
 
@@ -97,6 +111,15 @@ LRESULT CALLBACK performance_bar_wndproc(
             return 0;
         }
         break;
+    }
+
+    case WM_ERASEBKGND:
+    {
+        HDC dc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect(dc, &rc, instance->question_bg_brush);
+        return TRUE;
     }
 
     }

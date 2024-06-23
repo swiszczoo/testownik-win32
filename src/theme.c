@@ -26,6 +26,7 @@ static const COLORREF COLOR_TABLE[2][COL_COUNT] = {
         RGB(228, 250, 233),                 // COL_BACKGROUND_CORRECT
         RGB(249, 228, 227),                 // COL_BACKGROUND_WRONG
         RGB(250, 236, 226),                 // COL_BACKGROUND_PARTIALLY
+        RGB(240, 240, 240),                 // COL_STATUS_BACKGROUND
     },
     {   // Dark theme
         RGB(32, 32, 32),                    // COL_BACKGROUND
@@ -43,6 +44,7 @@ static const COLORREF COLOR_TABLE[2][COL_COUNT] = {
         RGB(32, 51, 34),                    // COL_BACKGROUND_CORRECT
         RGB(51, 32, 32),                    // COL_BACKGROUND_WRONG
         RGB(51, 37, 32),                    // COL_BACKGROUND_PARTIALLY
+        RGB(42, 42, 42),                    // COL_STATUS_BACKGROUND
     }
 };
 
@@ -182,6 +184,7 @@ void theme_destroy(void)
     AllowDarkModeForWindow = NULL;
     SetPreferredAppMode = NULL;
     SetWindowThemeDynamic = NULL;
+    OpenNcThemeDataDynamic = NULL;
 
     FreeLibrary(dll_ux_theme);
     dll_ux_theme = NULL;
@@ -210,17 +213,52 @@ COLORREF theme_get_color(testownik_color index)
 
 COLORREF theme_get_performance_color(int percent)
 {
-    int base = dark_mode_enabled ? 216 : 128;
+    int base = dark_mode_enabled ? 255 : 128;
+    int blue = dark_mode_enabled ? 128 : 0;
 
     int red = base;
     int green = base;
 
     if (percent < 50) {
-        green = percent * base / 50;
+        green = blue + percent * (base - blue) / 50;
     }
     if (percent > 50) {
-        red = (100 - percent) * base / 50;
+        red = blue + (100 - percent) * (base - blue) / 50;
     }
 
-    return RGB(red, green, dark_mode_enabled ? 64 : 0);
+    return RGB(red, green, blue);
+}
+
+COLORREF theme_get_performance_bg_color(int percent)
+{
+    if (dark_mode_enabled) {
+        const int base = 42;
+        const int blue = 20;
+
+        int red = base;
+        int green = base;
+
+        if (percent < 50) {
+            green = blue + percent * (base - blue) / 50;
+        }
+        if (percent > 50) {
+            red = blue + (100 - percent) * (base - blue) / 50;
+        }
+
+        return RGB(red, green, blue);
+    }
+
+    const int base = 220;
+    int red = 255;
+    int green = 255;
+
+    if (percent < 50) {
+        green = base + (percent) * (255 - base) / 50;
+    }
+
+    if (percent > 50) {
+        red = base + (100 - percent) * (255 - base) / 50;
+    }
+
+    return RGB(red, green, base);
 }

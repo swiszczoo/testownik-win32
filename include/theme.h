@@ -19,6 +19,7 @@ typedef enum {
     COL_BACKGROUND_CORRECT,
     COL_BACKGROUND_WRONG,
     COL_BACKGROUND_PARTIALLY,
+    COL_STATUS_BACKGROUND,
 
     COL_COUNT,
 } testownik_color;
@@ -32,3 +33,4 @@ bool theme_is_dark_theme(void);
 
 COLORREF theme_get_color(testownik_color index);
 COLORREF theme_get_performance_color(int percent);
+COLORREF theme_get_performance_bg_color(int percent);

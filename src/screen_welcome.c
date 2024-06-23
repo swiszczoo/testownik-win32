@@ -45,7 +45,7 @@ HWND screen_welcome_hwnd(screen_welcome* instance)
     return instance->hwnd;
 }
 
-void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_bar)
+void screen_welcome_create(HWND parent, screen_welcome* instance, status_bar* status_bar)
 {
     instance->status_bar = status_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
@@ -303,7 +303,12 @@ static void screen_welcome_paint(screen_welcome* instance)
 
 void screen_welcome_run(screen_welcome* instance)
 {
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L" Testownik \u2014 konfiguracja");
+    status_bar_data data;
+    ZeroMemory(&data, sizeof(data));
+    data.question_mode = FALSE;
+    wcscpy(data.question_text, L"Testownik \u2014 konfiguracja");
+
+    status_bar_update(instance->status_bar, &data);
 
     bool ok = testownik_try_load_database();
     if (!ok) {

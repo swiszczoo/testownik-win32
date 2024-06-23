@@ -9,6 +9,7 @@
 #include <messages.h>
 #include <random.h>
 #include <resource.h>
+#include <status_bar.h>
 #include <testownik.h>
 #include <theme.h>
 
@@ -30,8 +31,7 @@ static screen_question question_screen;
 static screen_ending ending_screen;
 
 static int dpi;
-static HWND status_bar;
-static performance_bar perf_bar;
+static status_bar stat_bar;
 
 static void init_comm_ctrl(void)
 {
@@ -51,9 +51,9 @@ static void register_screens(void)
 
 static void create_screens(HWND parent)
 {
-    screen_welcome_create(parent, &welcome_screen, status_bar);
-    screen_question_create(parent, &question_screen, status_bar, &perf_bar);
-    screen_ending_create(parent, &ending_screen, status_bar);
+    screen_welcome_create(parent, &welcome_screen, &stat_bar);
+    screen_question_create(parent, &question_screen, &stat_bar, NULL);
+    screen_ending_create(parent, &ending_screen, &stat_bar);
 }
 
 static void set_current_screen(screen new_screen)
@@ -63,8 +63,6 @@ static void set_current_screen(screen new_screen)
     ShowWindow(screen_welcome_hwnd(&welcome_screen),
         new_screen == SCREEN_WELCOME ? SW_SHOW : SW_HIDE);
     ShowWindow(screen_question_hwnd(&question_screen),
-        new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
-    ShowWindow(performance_bar_hwnd(&perf_bar),
         new_screen == SCREEN_QUESTION ? SW_SHOW : SW_HIDE);
     ShowWindow(screen_ending_hwnd(&ending_screen),
         new_screen == SCREEN_ENDING ? SW_SHOW : SW_HIDE);
@@ -82,15 +80,7 @@ static void resize_all_screens(int new_width, int new_height)
     SetWindowPos(screen_welcome_hwnd(&welcome_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
     SetWindowPos(screen_question_hwnd(&question_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
     SetWindowPos(screen_ending_hwnd(&ending_screen), NULL, 0, 0, new_width, new_height, SWP_NOMOVE);
-
-    RECT status_rect;
-    GetClientRect(status_bar, &status_rect);
-
-    int y = (status_rect.bottom - status_rect.top - dip(20)) / 2 + 1;
-    int text_width = dip(150);
-
-    SetWindowPos(performance_bar_hwnd(&perf_bar), NULL,
-        new_width - dip(300) + text_width, y, dip(300) - text_width - dip(30), dip(20), SWP_NOOWNERZORDER);
+    status_bar_resize(&stat_bar);
 }
 
 static HWND current_screen_hwnd(void)
@@ -158,7 +148,8 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     dpi = USER_DEFAULT_SCREEN_DPI;
 
-    hwnd = CreateWindow(wcex.lpszClassName,     // window class name
+    hwnd = CreateWindowEx(0,                    // extended styles
+        wcex.lpszClassName,                     // window class name
         L"Testownik v" VERSION_STRING,          // window caption
         WS_OVERLAPPEDWINDOW,                    // window style
         300,                                    // initial x position
@@ -182,12 +173,10 @@ int WINAPI wWinMain(HINSTANCE hInstance,
         }
     }
 
-    status_bar = CreateWindow(STATUSCLASSNAME, NULL,
-        SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, hInstance, NULL);
-    theme_setup_status_bar(status_bar);
-
     performance_bar_register();
-    performance_bar_create(status_bar, &perf_bar, 0, 0, 0, 0);
+    status_bar_register();
+
+    status_bar_create(hwnd, &stat_bar);
 
     register_screens();
     create_screens(hwnd);
@@ -237,7 +226,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     case WM_GETMINMAXINFO:
     {
         LPMINMAXINFO minMax = (LPMINMAXINFO)lParam;
-        minMax->ptMinTrackSize.x = dip(1200);
+        minMax->ptMinTrackSize.x = dip(1250);
         minMax->ptMinTrackSize.y = dip(850);
         return 0;
     }
@@ -255,18 +244,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
 
-        int statusBarParts[] = {
-            width - dip(900),
-            width - dip(700),
-            width - dip(500),
-            width - dip(300),
-            -1
-        };
-        SendMessage(status_bar, SB_SETPARTS, 5, (LPARAM)statusBarParts);
-        SendMessage(status_bar, WM_SIZE, 0, 0);
-
         RECT status_rect;
-        GetWindowRect(status_bar, &status_rect);
+        GetWindowRect(status_bar_hwnd(&stat_bar), &status_rect);
         resize_all_screens(width, height - status_rect.bottom + status_rect.top);
         return 0;
     }

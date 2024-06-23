@@ -36,7 +36,7 @@ HWND screen_ending_hwnd(screen_ending* instance)
     return instance->hwnd;
 }
 
-void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar)
+void screen_ending_create(HWND parent, screen_ending* instance, status_bar* status_bar)
 {
     instance->status_bar = status_bar;
     instance->hwnd = CreateWindowEx(WS_EX_COMPOSITED, CLASS_NAME, L"",
@@ -124,11 +124,12 @@ static void screen_ending_gather_stats(screen_ending* instance)
 
 void screen_ending_run(screen_ending* instance)
 {
-    SendMessage(instance->status_bar, SB_SETTEXT, 0, (LPARAM)L" Koniec gry!");
-    SendMessage(instance->status_bar, SB_SETTEXT, 1, (LPARAM)L"");
-    SendMessage(instance->status_bar, SB_SETTEXT, 2, (LPARAM)L"");
-    SendMessage(instance->status_bar, SB_SETTEXT, 3, (LPARAM)L"");
-    SendMessage(instance->status_bar, SB_SETTEXT, 4, (LPARAM)L"");
+    status_bar_data data;
+    ZeroMemory(&data, sizeof(data));
+    data.question_mode = FALSE;
+    wcscpy(data.question_text, L"Koniec gry!");
+
+    status_bar_update(instance->status_bar, &data);
 
     screen_ending_gather_stats(instance);
 }

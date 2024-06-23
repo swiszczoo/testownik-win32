@@ -2,10 +2,11 @@
 #include <Windows.h>
 
 #include <button_modern.h>
+#include <status_bar.h>
 
 typedef struct {
     HWND hwnd;
-    HWND status_bar;
+    status_bar* status_bar;
 
     button_modern library_btn;
     button_modern start_btn;
@@ -24,7 +25,7 @@ typedef struct {
 
 void screen_welcome_register(void);
 HWND screen_welcome_hwnd(screen_welcome* instance);
-void screen_welcome_create(HWND parent, screen_welcome* instance, HWND status_bar);
+void screen_welcome_create(HWND parent, screen_welcome* instance, status_bar* status_bar);
 void screen_welcome_destroy(screen_welcome* instance);
 void screen_welcome_run(screen_welcome* instance);
 
