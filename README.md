@@ -8,6 +8,10 @@ Aplikacja obsługuje jedynie nowy format pytań Testownika (pliki tekstowe zaczy
 
 ## Zrzuty ekranu
 
+**Nowość!** Aplikacja ma ciemny motyw, jeśli jest wybrany w systemie:
+
+![Ciemny motyw](readme/screen-darkmode.png)
+
 ![Ekran startowy](readme/screen1.png)
 
 ![Ekran pytania](readme/screen2.png)
