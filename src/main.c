@@ -52,7 +52,7 @@ static void register_screens(void)
 static void create_screens(HWND parent)
 {
     screen_welcome_create(parent, &welcome_screen, &stat_bar);
-    screen_question_create(parent, &question_screen, &stat_bar, NULL);
+    screen_question_create(parent, &question_screen, &stat_bar);
     screen_ending_create(parent, &ending_screen, &stat_bar);
 }
 
