@@ -23,7 +23,7 @@ Aplikacja obsługuje jedynie nowy format pytań Testownika (pliki tekstowe zaczy
 Tak jak poprzednie implementacje, Testownik-Win32 obsługuje grę z klawiatury:
 + klawisze `a-z` zaznaczają odpowiedź oznaczoną odpowiednim symbolem
 + klawisze `0-9` zaznaczają odpowiedź na pozycji odpowiadającej wciśniętemu klawiszowi (klawisz `0` zaznacza dziesiątą odpowiedź od góry listy)
-+ klawisz `Spacja` potwierdza wybór lub przechodzi do następnego pytania
++ klawisz `Spacja` lub `Enter` lub `NumpadEnter` potwierdza wybór lub przechodzi do następnego pytania
 
 ## Technologia
 

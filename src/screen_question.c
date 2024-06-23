@@ -918,7 +918,9 @@ LRESULT CALLBACK screen_question_wndproc(
                 }
             }
 
-            if (buffer[0] == L' ' && IsWindowEnabled(button_modern_hwnd(&instance->check_next_btn))) {
+            if ((buffer[0] == L' ' || buffer[0] == L'\r')
+                && IsWindowEnabled(button_modern_hwnd(&instance->check_next_btn))) {
+
                 screen_question_check_answer_next_question(instance);
             }
         }
