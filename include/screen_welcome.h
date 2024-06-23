@@ -18,6 +18,8 @@ typedef struct {
     HFONT title_fnt;
     HFONT header_fnt;
     HFONT body_fnt;
+
+    HBRUSH bg_brush;
 } screen_welcome;
 
 void screen_welcome_register(void);

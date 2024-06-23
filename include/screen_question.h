@@ -29,6 +29,7 @@ typedef struct {
     HFONT hint_fnt;
     UINT_PTR timer_ptr;
 
+    HBRUSH bg_brush;
     HBRUSH correct_bg_brush;
     HBRUSH wrong_bg_brush;
     HBRUSH partially_bg_brush;

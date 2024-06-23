@@ -17,6 +17,8 @@ typedef struct {
     int stat_correct_answers;
     int stat_total_answers;
     int stat_correct_percent;
+
+    HBRUSH bg_brush;
 } screen_ending;
 
 void screen_ending_register(void);

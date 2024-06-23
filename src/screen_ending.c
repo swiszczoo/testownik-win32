@@ -2,6 +2,7 @@
 
 #include <messages.h>
 #include <testownik.h>
+#include <theme.h>
 #include <utils.h>
 
 #include <CommCtrl.h>
@@ -9,8 +10,6 @@
 #define CLASS_NAME          L"EndingScreenClass"
 #define BASE_LAYOUT_WIDTH   dip(480)
 #define BASE_LAYOUT_HEIGHT  dip(650)
-
-#define VALUE_COLOR         RGB(29, 101, 157)
 
 static ATOM class_atom;
 
@@ -81,6 +80,8 @@ void screen_ending_create(HWND parent, screen_ending* instance, HWND status_bar)
     );
     instance->body_fnt = create_font(L"Segoe UI", dip(20), false, false);
     instance->value_font = create_font(L"Segoe UI", dip(45), true, false);
+
+    instance->bg_brush = CreateSolidBrush(theme_get_color(COL_BACKGROUND));
 }
 
 void screen_ending_destroy(screen_ending* instance)
@@ -100,6 +101,11 @@ void screen_ending_destroy(screen_ending* instance)
     if (instance->value_font) {
         DeleteObject(instance->value_font);
         instance->value_font = NULL;
+    }
+
+    if (instance->bg_brush) {
+        DeleteObject(instance->bg_brush);
+        instance->bg_brush = NULL;
     }
 }
 
@@ -168,21 +174,6 @@ static void screen_ending_format_time(LPWSTR out, int total_seconds)
     }
 }
 
-static COLORREF screen_ending_get_color(int percent)
-{
-    int red = 128;
-    int green = 128;
-
-    if (percent < 50) {
-        green = percent * 128 / 50;
-    }
-    if (percent > 50) {
-        red = (100 - percent) * 128 / 50;
-    }
-
-    return RGB(red, green, 0);
-}
-
 static void screen_ending_paint(screen_ending* instance)
 {
     TCHAR buffer[256];
@@ -198,7 +189,7 @@ static void screen_ending_paint(screen_ending* instance)
 
     HGDIOBJ prev_font = SelectObject(hdc, instance->title_fnt);
     SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(96, 96, 96));
+    SetTextColor(hdc, theme_get_color(COL_TITLE));
 
     RECT header_rect = { offset_x, offset_y + dip(30),
         BASE_LAYOUT_WIDTH + offset_x, offset_y + dip(100) };
@@ -225,7 +216,7 @@ static void screen_ending_paint(screen_ending* instance)
     GetTextExtentPoint32(hdc, buffer, wcslen(buffer), &part2_size);
     text_offset_x = (BASE_LAYOUT_WIDTH - part1_size.cx - part2_size.cx) / 2;
     SelectObject(hdc, instance->body_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
     rect1.left = offset_x + text_offset_x;
     rect1.top = offset_y + dip(120);
     rect1.right = rect1.left + part1_size.cx;
@@ -233,7 +224,7 @@ static void screen_ending_paint(screen_ending* instance)
     DrawText(hdc, LEARNING_TIME_STR, wcslen(LEARNING_TIME_STR), &rect1,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
-    SetTextColor(hdc, VALUE_COLOR);
+    SetTextColor(hdc, theme_get_color(COL_BUTTON_PRIMARY));
     rect2.left = rect1.right;
     rect2.top = rect1.top;
     rect2.right = rect2.left + part2_size.cx;
@@ -253,7 +244,7 @@ static void screen_ending_paint(screen_ending* instance)
     GetTextExtentPoint32(hdc, QUESTION_NUMBER2_STR, wcslen(QUESTION_NUMBER2_STR), &part3_size);
     text_offset_x = (BASE_LAYOUT_WIDTH - part1_size.cx - part2_size.cx - part3_size.cx) / 2;
     SelectObject(hdc, instance->body_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
     rect1.left = offset_x + text_offset_x;
     rect1.top = offset_y + dip(170);
     rect1.right = rect1.left + part1_size.cx;
@@ -261,7 +252,7 @@ static void screen_ending_paint(screen_ending* instance)
     DrawText(hdc, QUESTION_NUMBER_STR, wcslen(QUESTION_NUMBER_STR), &rect1,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
-    SetTextColor(hdc, VALUE_COLOR);
+    SetTextColor(hdc, theme_get_color(COL_BUTTON_PRIMARY));
     rect2.left = rect1.right;
     rect2.top = rect1.top;
     rect2.right = rect2.left + part2_size.cx;
@@ -269,7 +260,7 @@ static void screen_ending_paint(screen_ending* instance)
     DrawText(hdc, buffer, wcslen(buffer), &rect2,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->body_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
     rect3.left = rect2.right;
     rect3.top = rect2.top;
     rect3.right = rect3.left + part3_size.cx;
@@ -285,7 +276,7 @@ static void screen_ending_paint(screen_ending* instance)
     GetTextExtentPoint32(hdc, buffer, wcslen(buffer), &part2_size);
     text_offset_x = (BASE_LAYOUT_WIDTH - part1_size.cx - part2_size.cx) / 2;
     SelectObject(hdc, instance->body_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
     rect1.left = offset_x + text_offset_x;
     rect1.top = offset_y + dip(220);
     rect1.right = rect1.left + part1_size.cx;
@@ -293,7 +284,7 @@ static void screen_ending_paint(screen_ending* instance)
     DrawText(hdc, CORRECT_ANSWERS_STR, wcslen(CORRECT_ANSWERS_STR), &rect1,
         DT_SINGLELINE | DT_VCENTER | DT_NOCLIP);
     SelectObject(hdc, instance->value_font);
-    SetTextColor(hdc, screen_ending_get_color(instance->stat_correct_percent));
+    SetTextColor(hdc, theme_get_performance_color(instance->stat_correct_percent));
     rect2.left = rect1.right;
     rect2.top = rect1.top;
     rect2.right = rect2.left + part2_size.cx;
@@ -303,7 +294,7 @@ static void screen_ending_paint(screen_ending* instance)
 
     // Draw command link header
     SelectObject(hdc, instance->body_fnt);
-    SetTextColor(hdc, RGB(0, 0, 0));
+    SetTextColor(hdc, theme_get_color(COL_FOREGROUND));
     RECT command_link_rect = { offset_x, offset_y + dip(300),
         offset_x + BASE_LAYOUT_WIDTH, offset_y + dip(320) };
     DrawText(hdc, L"Co teraz?", -1, &command_link_rect,
@@ -343,11 +334,20 @@ LRESULT CALLBACK screen_ending_wndproc(
         }
         break;
     }
+    case WM_ERASEBKGND:
+    {
+        HDC dc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect(dc, &rc, instance->bg_brush);
+        return TRUE;
+    }
     case WM_CTLCOLORBTN:
     case WM_CTLCOLORSTATIC:
     {
         SetBkMode((HDC)wParam, TRANSPARENT);
-        return (LRESULT)GetStockObject(WHITE_BRUSH);
+        SetTextColor((HDC)wParam, theme_get_color(COL_FOREGROUND));
+        return (LRESULT)instance->bg_brush;
     }
     }
 

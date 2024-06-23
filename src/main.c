@@ -10,6 +10,7 @@
 #include <random.h>
 #include <resource.h>
 #include <testownik.h>
+#include <theme.h>
 
 #include <screen_ending.h>
 #include <screen_question.h>
@@ -148,7 +149,7 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     wcex.hInstance = hInstance;
     wcex.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_TESTOWNIK));
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.hbrBackground = NULL;
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = L"TestownikWndClass";
     wcex.hIconSm = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_TESTOWNIK_SM));
@@ -169,6 +170,10 @@ int WINAPI wWinMain(HINSTANCE hInstance,
         hInstance,                              // program instance handle
         NULL);                                  // creation parameters
 
+
+    // Initialize themes
+    theme_setup_dark_mode(hwnd);
+
     HMODULE user32dll = GetModuleHandle(L"user32.dll");
     if (user32dll) {
         UINT(*dpi_fn)(HWND) = (void*)GetProcAddress(user32dll, "GetDpiForWindow");
@@ -179,6 +184,7 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     status_bar = CreateWindow(STATUSCLASSNAME, NULL,
         SBARS_SIZEGRIP | WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, hInstance, NULL);
+    theme_setup_status_bar(status_bar);
 
     performance_bar_register();
     performance_bar_create(status_bar, &perf_bar, 0, 0, 0, 0);
@@ -203,6 +209,7 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     destroy_screens();
     image_decoder_destroy();
+    theme_destroy();
 
     ExitProcess(0);
     return 0;
@@ -280,6 +287,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
     {
         return SendMessage(current_screen_hwnd(), iMsg, wParam, lParam);
     }
+
+    case WM_ERASEBKGND:
+        return TRUE;
 
     }
 

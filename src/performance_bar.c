@@ -48,21 +48,6 @@ void performance_bar_set_value(performance_bar* instance, int value)
     InvalidateRect(instance->hwnd, NULL, TRUE);
 }
 
-static COLORREF performance_bar_get_color(performance_bar* instance)
-{
-    int red = 128;
-    int green = 128;
-
-    if (instance->value < 50) {
-        green = instance->value * 128 / 50;
-    }
-    if (instance->value > 50) {
-        red = (100 - instance->value) * 128 / 50;
-    }
-
-    return RGB(red, green, 0);
-}
-
 static void performance_bar_paint(performance_bar* instance)
 {
     PAINTSTRUCT ps;
@@ -71,7 +56,7 @@ static void performance_bar_paint(performance_bar* instance)
     RECT client_rect;
     GetClientRect(instance->hwnd, &client_rect);
 
-    COLORREF color = performance_bar_get_color(instance);
+    COLORREF color = theme_get_performance_color(instance->value);
 
     HBRUSH brush = CreateSolidBrush(color);
     HPEN pen = CreatePen(PS_SOLID, 1, color);
