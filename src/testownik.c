@@ -119,12 +119,14 @@ static void testownik_load_question_text(LPCWSTR text, int count, testownik_ques
 
     out->question_number = wcstol(text, NULL, 10);
     out->question_text = malloc(sizeof(WCHAR) * (count + 1));
-    *out->question_text = L'\0';
 
     if (out->question_text) {
-        for (int i = 0; text[i] && text[i + 1]; ++i) {
+        *out->question_text = L'\0';
+        
+        for (int i = 0; text[i] && text[i + 1] && i + 2 < count; ++i) {
             if (text[i] == L'.' && text[i + 1] == L'\t') {
                 wcsncat(out->question_text, text + i + 2, count - i - 2);
+                break;
             }
         }
     }

@@ -15,6 +15,10 @@
 #include <screen_question.h>
 #include <screen_welcome.h>
 
+#ifdef _DEBUG
+#include <crtdbg.h>
+#endif
+
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 typedef enum {
@@ -119,6 +123,10 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     hPrevInstance = NULL;
     lpCmdLine = GetCommandLine();
     nShowCmd = SW_SHOWDEFAULT;
+#endif
+
+#ifdef _DEBUG
+    _CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
     init_comm_ctrl();

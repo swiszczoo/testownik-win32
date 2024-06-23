@@ -43,6 +43,8 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_options(${PROJECT_NAME} PRIVATE /GS- /Os)
         set(MSVC_RUNTIME_LIBRARY MultiThreaded)
     endif(NOT TESTOWNIK_FORCE_CRT140)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE /GS)
 endif(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
